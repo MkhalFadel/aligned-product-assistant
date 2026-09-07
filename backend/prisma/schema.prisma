@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum ConversationStatus {
+  ACTIVE
+  ENDED
+
+  @@map("conversation_status")
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+
+  @@map("message_role")
+}
+
+enum Language {
+  ENGLISH
+  ARABIZI
+  ARABIC
+  MIXED
+
+  @@map("language")
+}
+
+model Product {
+  id              String           @id @default(uuid()) @map("id")
+  name            String           @map("name")
+  description     String           @map("description") @db.Text
+  price           Decimal          @map("price") @db.Decimal(10, 2)
+  imageUrl        String           @map("image_url")
+  category        String           @map("category")
+  attributes      Json             @map("attributes")
+  isActive        Boolean          @default(true) @map("is_active")
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+  recommendations Recommendation[]
+
+  @@index([category])
+  @@index([createdAt])
+  @@map("products")
+}
+
+model Conversation {
+  id               String             @id @default(uuid()) @map("id")
+  sessionId        String             @unique @map("session_id")
+  status           ConversationStatus @default(ACTIVE) @map("status")
+  detectedLanguage Language           @default(ENGLISH) @map("detected_language")
+  startedAt        DateTime           @default(now()) @map("started_at")
+  endedAt          DateTime?          @map("ended_at")
+  reportToken      String             @unique @map("report_token")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  messages         Message[]
+  feedback         Feedback?
+
+  @@index([createdAt])
+  @@map("conversations")
+}
+
+model Message {
+  id                String           @id @default(uuid()) @map("id")
+  conversationId    String           @map("conversation_id")
+  role              MessageRole      @map("role")
+  content           String           @map("content") @db.Text
+  language          Language         @map("language")
+  accuracyScore     Float?           @map("accuracy_score")
+  hallucinationRisk Float?           @map("hallucination_risk")
+  isFlagged         Boolean          @default(false) @map("is_flagged")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  conversation      Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  recommendations   Recommendation[]
+
+  @@index([conversationId])
+  @@index([createdAt])
+  @@map("messages")
+}
+
+model Recommendation {
+  id        String  @id @default(uuid()) @map("id")
+  messageId String  @map("message_id")
+  productId String  @map("product_id")
+  reason    String  @map("reason") @db.Text
+  message   Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([messageId])
+  @@index([productId])
+  @@map("recommendations")
+}
+
+model Feedback {
+  id             String       @id @default(uuid()) @map("id")
+  conversationId String       @unique @map("conversation_id")
+  rating         Int          @map("rating")
+  comment        String?      @map("comment") @db.Text
+  createdAt      DateTime     @default(now()) @map("created_at")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([createdAt])
+  @@map("feedback")
+}
+
+model AssistantSettings {
+  id                 String   @id @default(uuid()) @map("id")
+  assistantName      String   @map("assistant_name")
+  systemInstructions String   @map("system_instructions") @db.Text
+  defaultLanguage    Language @default(ENGLISH) @map("default_language")
+  highRiskThreshold  Float    @map("high_risk_threshold")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("assistant_settings")
+}
