@@ -1,0 +1,114 @@
+.page {
+   min-height: 100vh;
+   padding: 48px 28px;
+   background: #f6f7fb;
+}
+
+.content {
+   width: min(1180px, 100%);
+   margin: 0 auto;
+}
+
+.header {
+   display: flex;
+   align-items: flex-end;
+   justify-content: space-between;
+   gap: 24px;
+   margin-bottom: 30px;
+}
+
+.eyebrow {
+   margin: 0 0 8px;
+   color: #2563eb;
+   font-size: 12px;
+   font-weight: 800;
+   letter-spacing: 0.08em;
+   text-transform: uppercase;
+}
+
+.header h1 {
+   margin: 0;
+   color: #172033;
+   font-size: clamp(32px, 4vw, 42px);
+   letter-spacing: -0.05em;
+   line-height: 1;
+}
+
+.description {
+   max-width: 610px;
+   margin: 12px 0 0;
+   color: #64748b;
+   font-size: 15px;
+   line-height: 1.55;
+}
+
+.addButton {
+   min-height: 42px;
+   flex: 0 0 auto;
+   padding: 0 16px;
+   color: #fff;
+   border: 1px solid #1d4ed8;
+   border-radius: 8px;
+   background: #2563eb;
+   font-size: 14px;
+   font-weight: 700;
+}
+
+.addButton:hover {
+   background: #1d4ed8;
+}
+
+.formCard,
+.listCard {
+   overflow: hidden;
+   border: 1px solid #e2e8f0;
+   border-radius: 12px;
+   background: #fff;
+   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+}
+
+.formCard {
+   margin-bottom: 20px;
+}
+
+.loading {
+   margin: 0;
+   padding: 56px 24px;
+   color: #64748b;
+   text-align: center;
+}
+
+.emptyState {
+   padding: 64px 24px;
+   text-align: center;
+}
+
+.emptyState h2 {
+   margin: 0;
+   color: #172033;
+   font-size: 21px;
+}
+
+.emptyState p {
+   max-width: 430px;
+   margin: 10px auto 20px;
+   color: #64748b;
+   font-size: 14px;
+   line-height: 1.5;
+}
+
+@media (max-width: 720px) {
+   .page {
+      padding: 28px 16px;
+   }
+
+   .header {
+      align-items: flex-start;
+      flex-direction: column;
+      margin-bottom: 24px;
+   }
+
+   .addButton {
+      width: 100%;
+   }
+}

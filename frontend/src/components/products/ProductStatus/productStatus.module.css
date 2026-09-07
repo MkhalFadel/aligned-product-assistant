@@ -1,0 +1,21 @@
+.active,
+.inactive {
+   display: inline-flex;
+   align-items: center;
+   min-height: 26px;
+   padding: 0 10px;
+   border-radius: 999px;
+   font-size: 12px;
+   font-weight: 700;
+   line-height: 1;
+}
+
+.active {
+   color: #166534;
+   background: #dcfce7;
+}
+
+.inactive {
+   color: #6b7280;
+   background: #eef0f4;
+}

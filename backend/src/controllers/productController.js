@@ -70,10 +70,46 @@ async function deleteProduct(req, res, next) {
    }
 }
 
+async function activateProduct(req, res, next) {
+   try {
+      const product = await productService.activateProduct(req.params.id);
+
+      if (!product) {
+         return res.status(404).json({ message: "Product not found" });
+      }
+
+      return res.status(200).json({ product });
+   } catch (error) {
+      return next(error);
+   }
+}
+
+async function permanentlyDeleteProduct(req, res, next) {
+   try {
+      const result = await productService.permanentlyDeleteProduct(req.params.id);
+
+      if (!result) {
+         return res.status(404).json({ message: "Product not found" });
+      }
+
+      if (result.hasRecommendationHistory) {
+         return res.status(409).json({
+            message: "Product cannot be permanently deleted because it has recommendation history. Deactivate it instead."
+         });
+      }
+
+      return res.status(200).json({ product: result.product });
+   } catch (error) {
+      return next(error);
+   }
+}
+
 module.exports = {
    getAllProducts,
    getProductById,
    createProduct,
    updateProduct,
-   deleteProduct
+   deleteProduct,
+   activateProduct,
+   permanentlyDeleteProduct
 };

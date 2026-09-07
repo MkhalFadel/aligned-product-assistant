@@ -1,0 +1,100 @@
+.backdrop {
+   position: fixed;
+   z-index: 20;
+   inset: 0;
+   display: grid;
+   place-items: center;
+   padding: 20px;
+   background: rgba(15, 23, 42, 0.48);
+}
+
+.dialog {
+   width: min(440px, 100%);
+   padding: 24px;
+   border: 1px solid #e2e8f0;
+   border-radius: 12px;
+   background: #fff;
+   box-shadow: 0 20px 50px rgba(15, 23, 42, 0.24);
+}
+
+.dialog h2 {
+   margin: 0;
+   color: #172033;
+   font-size: 20px;
+   letter-spacing: -0.02em;
+}
+
+.dialog p {
+   margin: 12px 0 0;
+   color: #64748b;
+   font-size: 14px;
+   line-height: 1.55;
+}
+
+.actions {
+   display: flex;
+   justify-content: flex-end;
+   gap: 10px;
+   margin-top: 24px;
+}
+
+.cancelButton,
+.confirmButton {
+   min-height: 38px;
+   padding: 0 14px;
+   border: 1px solid;
+   border-radius: 7px;
+   font-size: 13px;
+   font-weight: 700;
+}
+
+.cancelButton {
+   color: #475569;
+   border-color: #cbd5e1;
+   background: #fff;
+}
+
+.confirmButton {
+   color: #fff;
+   border-color: #1d4ed8;
+   background: #2563eb;
+}
+
+.confirmButton:hover:not(:disabled) {
+   background: #1d4ed8;
+}
+
+.dangerButton {
+   border-color: #b91c1c;
+   background: #dc2626;
+}
+
+.dangerButton:hover:not(:disabled) {
+   background: #b91c1c;
+}
+
+.cancelButton:disabled,
+.confirmButton:disabled {
+   cursor: not-allowed;
+   opacity: 0.65;
+}
+
+@media (max-width: 480px) {
+   .backdrop {
+      align-items: end;
+      padding: 12px;
+   }
+
+   .dialog {
+      padding: 20px;
+   }
+
+   .actions {
+      flex-direction: column-reverse;
+   }
+
+   .cancelButton,
+   .confirmButton {
+      width: 100%;
+   }
+}

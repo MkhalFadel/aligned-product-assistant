@@ -1,0 +1,161 @@
+.form {
+   padding: 24px;
+}
+
+.formHeader,
+.formActions {
+   display: flex;
+   align-items: center;
+   justify-content: space-between;
+   gap: 16px;
+}
+
+.formHeader {
+   margin-bottom: 22px;
+}
+
+.eyebrow {
+   margin: 0 0 4px;
+   color: #64748b;
+   font-size: 12px;
+   font-weight: 700;
+   letter-spacing: 0.07em;
+   text-transform: uppercase;
+}
+
+.form h2 {
+   margin: 0;
+   color: #172033;
+   font-size: 21px;
+   letter-spacing: -0.03em;
+}
+
+.closeButton,
+.cancelButton,
+.submitButton {
+   min-height: 38px;
+   padding: 0 14px;
+   border: 1px solid;
+   border-radius: 7px;
+   font-size: 13px;
+   font-weight: 700;
+}
+
+.closeButton,
+.cancelButton {
+   color: #475569;
+   border-color: #cbd5e1;
+   background: #fff;
+}
+
+.submitButton {
+   color: #fff;
+   border-color: #1d4ed8;
+   background: #2563eb;
+}
+
+.submitButton:hover:not(:disabled) {
+   background: #1d4ed8;
+}
+
+.closeButton:disabled,
+.cancelButton:disabled,
+.submitButton:disabled {
+   opacity: 0.6;
+}
+
+.error {
+   margin: 0 0 18px;
+   padding: 10px 12px;
+   color: #b42318;
+   border: 1px solid #fecaca;
+   border-radius: 7px;
+   background: #fef2f2;
+   font-size: 13px;
+}
+
+.fields {
+   display: grid;
+   grid-template-columns: repeat(2, minmax(0, 1fr));
+   gap: 16px;
+}
+
+.fields label {
+   display: grid;
+   gap: 7px;
+   color: #334155;
+   font-size: 13px;
+   font-weight: 700;
+}
+
+.fields input,
+.fields select,
+.fields textarea {
+   width: 100%;
+   padding: 9px 10px;
+   color: #172033;
+   border: 1px solid #cbd5e1;
+   border-radius: 7px;
+   outline: none;
+   background: #fff;
+   font-weight: 400;
+}
+
+.fields textarea {
+   resize: vertical;
+}
+
+.fields input:focus,
+.fields select:focus,
+.fields textarea:focus {
+   border-color: #2563eb;
+   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.fields input:disabled,
+.fields select:disabled,
+.fields textarea:disabled {
+   color: #64748b;
+   background: #f8fafc;
+}
+
+.fullWidth {
+   grid-column: 1 / -1;
+}
+
+.optional {
+   color: #94a3b8;
+   font-weight: 400;
+}
+
+.attributes {
+   margin: 24px 0;
+   padding: 18px;
+   border: 1px solid #e2e8f0;
+   border-radius: 9px;
+}
+
+.attributes legend {
+   padding: 0 6px;
+   color: #475569;
+   font-size: 13px;
+   font-weight: 800;
+}
+
+.formActions {
+   justify-content: flex-end;
+}
+
+@media (max-width: 560px) {
+   .form {
+      padding: 18px;
+   }
+
+   .fields {
+      grid-template-columns: 1fr;
+   }
+
+   .fullWidth {
+      grid-column: auto;
+   }
+}

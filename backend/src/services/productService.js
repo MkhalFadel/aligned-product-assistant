@@ -74,10 +74,70 @@ async function deleteProduct(id) {
    return serializeProduct(product);
 }
 
+async function activateProduct(id) {
+   const existingProduct = await prisma.product.findUnique({
+      where: { id }
+   });
+
+   if (!existingProduct) {
+      return null;
+   }
+
+   if (existingProduct.isActive) {
+      return serializeProduct(existingProduct);
+   }
+
+   const product = await prisma.product.update({
+      where: { id },
+      data: { isActive: true }
+   });
+
+   return serializeProduct(product);
+}
+
+async function permanentlyDeleteProduct(id) {
+   const existingProduct = await prisma.product.findUnique({
+      where: { id }
+   });
+
+   if (!existingProduct) {
+      return null;
+   }
+
+   // Preserve recommendation history by blocking permanent deletion when referenced.
+   const recommendation = await prisma.recommendation.findFirst({
+      where: { productId: id },
+      select: { id: true }
+   });
+
+   if (recommendation) {
+      return { hasRecommendationHistory: true };
+   }
+
+   try {
+      const product = await prisma.product.delete({
+         where: { id }
+      });
+
+      return {
+         hasRecommendationHistory: false,
+         product: serializeProduct(product)
+      };
+   } catch (error) {
+      if (error.code === "P2003") {
+         return { hasRecommendationHistory: true };
+      }
+
+      throw error;
+   }
+}
+
 module.exports = {
    getAllProducts,
    getProductById,
    createProduct,
    updateProduct,
-   deleteProduct
+   deleteProduct,
+   activateProduct,
+   permanentlyDeleteProduct
 };
