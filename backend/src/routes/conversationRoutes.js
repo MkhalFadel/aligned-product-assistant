@@ -8,7 +8,7 @@ const {
 
 const router = express.Router();
 
-// Conversation persistence endpoints without AI generation or scoring.
+// Conversation endpoints generate grounded replies for trusted user messages.
 router.post("/", validate(validateCreateConversation), conversationController.createConversation);
 router.get("/", conversationController.getAllConversations);
 router.get("/:id", conversationController.getConversationById);

@@ -1,4 +1,5 @@
 const conversationService = require("../services/conversationService");
+const assistantService = require("../services/assistantService");
 const { getMessageData } = require("../validators/conversationValidator");
 
 // Controllers translate conversation service results into HTTP responses.
@@ -39,7 +40,8 @@ async function getConversationById(req, res, next) {
 async function addMessage(req, res, next) {
    try {
       const messageData = getMessageData(req.body);
-      const result = await conversationService.addMessage(req.params.id, messageData);
+      // Client user messages are stored once before grounded generation begins.
+      const result = await assistantService.addUserMessageAndRespond(req.params.id, messageData);
 
       if (!result) {
          return res.status(404).json({ message: "Conversation not found" });
@@ -49,8 +51,26 @@ async function addMessage(req, res, next) {
          return res.status(409).json({ message: "Conversation has already ended" });
       }
 
-      return res.status(201).json({ message: result.message });
+      return res.status(201).json({
+         userMessage: result.userMessage,
+         assistantMessage: result.assistantMessage
+      });
    } catch (error) {
+      if (error.code === "GEMINI_CONFIGURATION_ERROR") {
+         console.error(error.message);
+
+         return res.status(500).json({ message: "AI assistant is not configured" });
+      }
+
+      if (error.code === "GEMINI_PROVIDER_ERROR"
+         || error.code === "GEMINI_RESPONSE_ERROR"
+         || error.code === "AI_RECOMMENDATION_ERROR"
+         || error.code === "AI_LANGUAGE_ERROR") {
+         console.error("Assistant response failed", { code: error.code });
+
+         return res.status(500).json({ message: "Unable to generate an assistant response right now" });
+      }
+
       return next(error);
    }
 }

@@ -179,5 +179,6 @@ module.exports = {
    getAllConversations,
    getConversationById,
    addMessage,
-   endConversation
+   endConversation,
+   serializeMessage
 };

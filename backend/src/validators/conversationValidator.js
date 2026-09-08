@@ -1,5 +1,5 @@
 const allowedMessageFields = ["role", "content", "language"];
-const allowedRoles = ["USER", "ASSISTANT"];
+const allowedRoles = ["USER"];
 const allowedLanguages = ["ENGLISH", "ARABIZI", "ARABIC", "MIXED"];
 
 function isPlainObject(value) {
@@ -51,7 +51,7 @@ function validateAddMessage(message) {
    }
 
    if (!allowedRoles.includes(message.role)) {
-      errors.push("role must be USER or ASSISTANT");
+      errors.push("role must be USER");
    }
 
    if (!allowedLanguages.includes(message.language)) {
