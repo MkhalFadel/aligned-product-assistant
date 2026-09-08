@@ -53,7 +53,7 @@ model Conversation {
   id               String             @id @default(uuid()) @map("id")
   sessionId        String             @unique @map("session_id")
   status           ConversationStatus @default(ACTIVE) @map("status")
-  detectedLanguage Language           @default(ENGLISH) @map("detected_language")
+  detectedLanguage Language?          @map("detected_language")
   startedAt        DateTime           @default(now()) @map("started_at")
   endedAt          DateTime?          @map("ended_at")
   reportToken      String             @unique @map("report_token")
