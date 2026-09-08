@@ -1,6 +1,8 @@
 const { GoogleGenAI } = require("@google/genai");
 
 const allowedLanguages = ["ENGLISH", "ARABIZI", "ARABIC", "MIXED"];
+const allowedClaimTypes = ["exact_fact", "comparison", "suitability", "subjective", "unknown"];
+const allowedClaimAssessments = ["SUPPORTED", "UNSUPPORTED", "SUBJECTIVE_REASONABLE", "NOT_APPLICABLE"];
 const defaultModel = "gemini-3.1-flash-lite";
 const requestTimeoutMs = 20000;
 
@@ -27,6 +29,36 @@ const responseSchema = {
       }
    },
    required: ["answer", "language", "recommendedProducts"]
+};
+
+const claimEvaluationSchema = {
+   type: "object",
+   additionalProperties: false,
+   properties: {
+      claims: {
+         type: "array",
+         items: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+               text: { type: "string" },
+               productId: { type: ["string", "null"] },
+               claimType: {
+                  type: "string",
+                  enum: allowedClaimTypes
+               },
+               field: { type: ["string", "null"] },
+               value: { type: ["string", "null"] },
+               assessment: {
+                  type: "string",
+                  enum: allowedClaimAssessments
+               }
+            },
+            required: ["text", "claimType", "assessment"]
+         }
+      }
+   },
+   required: ["claims"]
 };
 
 function createAiError(message, code) {
@@ -110,6 +142,21 @@ function validateRecommendation(recommendation) {
       && recommendation.reason.trim() !== "";
 }
 
+function isNullableString(value) {
+   return value === undefined || value === null || typeof value === "string";
+}
+
+function validateClaim(claim) {
+   return isPlainObject(claim)
+      && typeof claim.text === "string"
+      && claim.text.trim() !== ""
+      && isNullableString(claim.productId)
+      && allowedClaimTypes.includes(claim.claimType)
+      && isNullableString(claim.field)
+      && isNullableString(claim.value)
+      && allowedClaimAssessments.includes(claim.assessment);
+}
+
 // Validates structured output before application code can persist it.
 function parseAssistantResponse(responseText) {
    let output;
@@ -137,6 +184,31 @@ function parseAssistantResponse(responseText) {
          reason: recommendation.reason.trim()
       }))
    };
+}
+
+function parseClaimEvaluation(responseText) {
+   let output;
+
+   try {
+      output = JSON.parse(responseText);
+   } catch {
+      throw createAiError("Gemini returned malformed scoring output", "SCORING_RESPONSE_ERROR");
+   }
+
+   if (!isPlainObject(output)
+      || !Array.isArray(output.claims)
+      || !output.claims.every(validateClaim)) {
+      throw createAiError("Gemini returned invalid scoring output", "SCORING_RESPONSE_ERROR");
+   }
+
+   return output.claims.map((claim) => ({
+      text: claim.text.trim(),
+      productId: claim.productId?.trim() || null,
+      claimType: claim.claimType,
+      field: claim.field?.trim() || null,
+      value: claim.value?.trim() || null,
+      assessment: claim.assessment
+   }));
 }
 
 function getClient() {
@@ -172,8 +244,7 @@ function getResponseText(response) {
    return response.text;
 }
 
-// Calls the provider with strict JSON output and no access to database concerns.
-async function generateAssistantResponse({ language, history, catalogue }) {
+async function generateStructuredResponse({ instructions, contents, schema, maxOutputTokens }) {
    const controller = new AbortController();
    const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
 
@@ -181,18 +252,18 @@ async function generateAssistantResponse({ language, history, catalogue }) {
       const client = getClient();
       const response = await client.models.generateContent({
          model: process.env.GEMINI_MODEL?.trim() || defaultModel,
-         contents: buildModelContents(history, catalogue),
+         contents,
          config: {
-            systemInstruction: buildInstructions(language),
+            systemInstruction: instructions,
             temperature: 0.2,
-            maxOutputTokens: 600,
+            maxOutputTokens,
             responseMimeType: "application/json",
-            responseJsonSchema: responseSchema,
+            responseJsonSchema: schema,
             abortSignal: controller.signal
          }
       });
 
-      return parseAssistantResponse(getResponseText(response));
+      return getResponseText(response);
    } catch (error) {
       if (error.code === "GEMINI_CONFIGURATION_ERROR" || error.code === "GEMINI_RESPONSE_ERROR") {
          throw error;
@@ -210,6 +281,54 @@ async function generateAssistantResponse({ language, history, catalogue }) {
    }
 }
 
+function buildClaimEvaluatorInstructions() {
+   return [
+      "You are a strict consumer hardware catalogue claim evaluator.",
+      "Use only the supplied catalogue and deterministic findings. Do not use external product knowledge.",
+      "Extract factual claims from the assistant answer and recommendation reasons.",
+      "Classify each claim as SUPPORTED, UNSUPPORTED, SUBJECTIVE_REASONABLE, or NOT_APPLICABLE.",
+      "Use SUBJECTIVE_REASONABLE for a reasonable preference statement that is not an invented specification.",
+      "Use NOT_APPLICABLE for claims already resolved by deterministic findings.",
+      "Do not invent claims or product details."
+   ].join("\n");
+}
+
+// Calls the provider with strict JSON output and no access to database concerns.
+async function generateAssistantResponse({ language, history, catalogue }) {
+   const responseText = await generateStructuredResponse({
+      instructions: buildInstructions(language),
+      contents: buildModelContents(history, catalogue),
+      schema: responseSchema,
+      maxOutputTokens: 600
+   });
+
+   return parseAssistantResponse(responseText);
+}
+
+async function evaluateAssistantClaims({ customerMessage, assistantAnswer, recommendations, catalogue, deterministicFindings }) {
+   const contents = [{
+      role: "user",
+      parts: [{
+         text: JSON.stringify({
+            customerMessage,
+            assistantAnswer,
+            recommendations,
+            catalogue,
+            deterministicFindings
+         })
+      }]
+   }];
+   const responseText = await generateStructuredResponse({
+      instructions: buildClaimEvaluatorInstructions(),
+      contents,
+      schema: claimEvaluationSchema,
+      maxOutputTokens: 800
+   });
+
+   return parseClaimEvaluation(responseText);
+}
+
 module.exports = {
-   generateAssistantResponse
+   generateAssistantResponse,
+   evaluateAssistantClaims
 };

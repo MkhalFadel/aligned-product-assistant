@@ -1,5 +1,6 @@
 const prisma = require("../lib/prisma");
 const aiService = require("./aiService");
+const scoringService = require("./scoringService");
 const { buildCatalogueContext } = require("./catalogueContextService");
 const { serializeMessage } = require("./conversationService");
 
@@ -30,13 +31,16 @@ function validateRecommendations(recommendedProducts, activeProducts) {
    }, []);
 }
 
-async function storeAssistantMessage(conversationId, response, recommendations) {
+async function storeAssistantMessage(conversationId, response, recommendations, scores) {
    // The nested recommendation write and assistant message commit together.
    const messageData = {
       conversationId,
       role: "ASSISTANT",
       content: response.answer,
-      language: response.language
+      language: response.language,
+      accuracyScore: scores.accuracyScore,
+      hallucinationRisk: scores.hallucinationRisk,
+      isFlagged: scores.isFlagged
    };
 
    if (recommendations.length > 0) {
@@ -95,7 +99,7 @@ async function addUserMessageAndRespond(id, messageData) {
       })
    ]);
 
-   const [history, activeProducts] = await Promise.all([
+   const [history, activeProducts, assistantSettings] = await Promise.all([
       prisma.message.findMany({
          where: { conversationId: id },
          orderBy: { createdAt: "desc" },
@@ -104,13 +108,18 @@ async function addUserMessageAndRespond(id, messageData) {
       prisma.product.findMany({
          where: { isActive: true },
          orderBy: { createdAt: "desc" }
+      }),
+      prisma.assistantSettings.findFirst({
+         select: { highRiskThreshold: true },
+         orderBy: { updatedAt: "desc" }
       })
    ]);
+   const catalogue = buildCatalogueContext(activeProducts);
 
    const response = await aiService.generateAssistantResponse({
       language: messageData.language,
       history: history.reverse(),
-      catalogue: buildCatalogueContext(activeProducts)
+      catalogue
    });
 
    if (response.language !== messageData.language) {
@@ -118,7 +127,15 @@ async function addUserMessageAndRespond(id, messageData) {
    }
 
    const recommendations = validateRecommendations(response.recommendedProducts, activeProducts);
-   const assistantMessage = await storeAssistantMessage(id, response, recommendations);
+   const scores = await scoringService.scoreAssistantResponse({
+      customerMessage: messageData.content,
+      assistantAnswer: response.answer,
+      recommendations,
+      activeProducts: catalogue,
+      highRiskThreshold: assistantSettings?.highRiskThreshold
+   });
+   // TODO: Production should hold high-risk replies, retry with stricter grounding, re-score, then escalate if needed.
+   const assistantMessage = await storeAssistantMessage(id, response, recommendations, scores);
 
    return {
       hasEnded: false,

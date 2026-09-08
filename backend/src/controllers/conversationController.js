@@ -64,6 +64,8 @@ async function addMessage(req, res, next) {
 
       if (error.code === "GEMINI_PROVIDER_ERROR"
          || error.code === "GEMINI_RESPONSE_ERROR"
+         || error.code === "SCORING_RESPONSE_ERROR"
+         || error.code === "SCORING_ERROR"
          || error.code === "AI_RECOMMENDATION_ERROR"
          || error.code === "AI_LANGUAGE_ERROR") {
          console.error("Assistant response failed", { code: error.code });
