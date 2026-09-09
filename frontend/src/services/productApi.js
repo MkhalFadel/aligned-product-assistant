@@ -30,14 +30,22 @@ function getResponseProduct(data) {
    return data.product
 }
 
-export async function getProducts() {
-   const data = await request('/api/products?includeInactive=true')
+async function getProductList(path) {
+   const data = await request(path)
 
    if (!Array.isArray(data.products)) {
       throw new Error('Product API returned an invalid product list.')
    }
 
    return data.products
+}
+
+export function getProducts() {
+   return getProductList('/api/products?includeInactive=true')
+}
+
+export function getActiveProducts() {
+   return getProductList('/api/products')
 }
 
 export async function createProduct(productData) {
