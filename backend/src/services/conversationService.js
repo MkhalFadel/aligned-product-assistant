@@ -38,7 +38,40 @@ function serializeMessage(message) {
    return serializedMessage;
 }
 
-function serializeConversation(conversation) {
+function getConversationSummary(messages) {
+   // Only fully scored assistant messages contribute to conversation-level averages.
+   const scoredAssistantMessages = messages.filter((message) => (
+      message.role === "ASSISTANT"
+      && Number.isFinite(message.accuracyScore)
+      && Number.isFinite(message.hallucinationRisk)
+   ));
+   const flaggedMessageCount = messages.filter((message) => (
+      message.role === "ASSISTANT" && message.isFlagged
+   )).length;
+
+   if (scoredAssistantMessages.length === 0) {
+      return {
+         averageAccuracy: null,
+         averageHallucinationRisk: null,
+         flaggedMessageCount
+      };
+   }
+
+   const totalAccuracy = scoredAssistantMessages.reduce((total, message) => (
+      total + message.accuracyScore
+   ), 0);
+   const totalHallucinationRisk = scoredAssistantMessages.reduce((total, message) => (
+      total + message.hallucinationRisk
+   ), 0);
+
+   return {
+      averageAccuracy: totalAccuracy / scoredAssistantMessages.length,
+      averageHallucinationRisk: totalHallucinationRisk / scoredAssistantMessages.length,
+      flaggedMessageCount
+   };
+}
+
+function serializeConversation(conversation, { includeMessages = false } = {}) {
    if (!conversation) {
       return null;
    }
@@ -51,6 +84,14 @@ function serializeConversation(conversation) {
    }
 
    if (messages) {
+      if (serializedConversation.messageCount === undefined) {
+         serializedConversation.messageCount = messages.length;
+      }
+
+      Object.assign(serializedConversation, getConversationSummary(messages));
+   }
+
+   if (includeMessages && messages) {
       serializedConversation.messages = messages.map(serializeMessage);
    }
 
@@ -82,6 +123,14 @@ async function getAllConversations() {
          createdAt: true,
          _count: {
             select: { messages: true }
+         },
+         messages: {
+            select: {
+               role: true,
+               accuracyScore: true,
+               hallucinationRisk: true,
+               isFlagged: true
+            }
          }
       },
       orderBy: { createdAt: "desc" }
@@ -106,7 +155,7 @@ async function getConversationById(id) {
       }
    });
 
-   return serializeConversation(conversation);
+   return serializeConversation(conversation, { includeMessages: true });
 }
 
 async function addMessage(id, messageData) {

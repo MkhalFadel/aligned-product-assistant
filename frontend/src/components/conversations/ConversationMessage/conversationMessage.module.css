@@ -1,0 +1,146 @@
+.message {
+   padding: 20px;
+   border: 1px solid #e2e8f0;
+   border-radius: 12px;
+   background: #fff;
+}
+
+.user {
+   border-left: 4px solid #94a3b8;
+}
+
+.assistant {
+   border-left: 4px solid #2563eb;
+}
+
+.header {
+   display: flex;
+   align-items: flex-start;
+   justify-content: space-between;
+   gap: 16px;
+}
+
+.role,
+.language,
+.time,
+.content,
+.flagged {
+   margin: 0;
+}
+
+.role {
+   color: #172033;
+   font-size: 14px;
+   font-weight: 800;
+}
+
+.language,
+.time {
+   color: #64748b;
+   font-size: 12px;
+}
+
+.language {
+   margin-top: 3px;
+}
+
+.time {
+   flex: 0 0 auto;
+   text-align: right;
+}
+
+.content {
+   margin-top: 16px;
+   color: #334155;
+   font-size: 14px;
+   line-height: 1.65;
+   white-space: pre-wrap;
+}
+
+.scores {
+   display: flex;
+   flex-wrap: wrap;
+   gap: 10px;
+   margin-top: 18px;
+}
+
+.flagged {
+   margin-top: 14px;
+   padding: 10px 12px;
+   color: #b42318;
+   border: 1px solid #fecaca;
+   border-radius: 8px;
+   background: #fef2f2;
+   font-size: 13px;
+   line-height: 1.45;
+}
+
+.recommendations {
+   margin-top: 20px;
+   padding-top: 18px;
+   border-top: 1px solid #edf0f4;
+}
+
+.recommendations h3 {
+   margin: 0;
+   color: #172033;
+   font-size: 13px;
+}
+
+.recommendations ul {
+   display: grid;
+   gap: 10px;
+   margin: 12px 0 0;
+   padding: 0;
+   list-style: none;
+}
+
+.recommendations li {
+   padding: 12px;
+   border: 1px solid #e2e8f0;
+   border-radius: 8px;
+   background: #f8fafc;
+}
+
+.recommendations li strong,
+.recommendations li span,
+.recommendations li p {
+   display: block;
+}
+
+.recommendations li strong {
+   color: #172033;
+   font-size: 13px;
+}
+
+.recommendations li span {
+   margin-top: 3px;
+   color: #64748b;
+   font-size: 12px;
+}
+
+.recommendations li p {
+   margin: 8px 0 0;
+   color: #475569;
+   font-size: 13px;
+   line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+   .message {
+      padding: 16px;
+   }
+
+   .header {
+      flex-direction: column;
+      gap: 6px;
+   }
+
+   .time {
+      text-align: left;
+   }
+
+   .scores > * {
+      flex: 1 1 140px;
+   }
+}

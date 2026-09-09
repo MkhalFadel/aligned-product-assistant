@@ -1,0 +1,63 @@
+.badge {
+   display: inline-flex;
+   min-width: 108px;
+   flex-direction: column;
+   gap: 2px;
+   padding: 9px 10px;
+   border: 1px solid;
+   border-radius: 8px;
+   font-size: 12px;
+   line-height: 1.25;
+}
+
+.label,
+.description {
+   color: currentColor;
+}
+
+.label {
+   font-size: 10px;
+   font-weight: 800;
+   letter-spacing: 0.05em;
+   text-transform: uppercase;
+}
+
+.badge strong {
+   color: #172033;
+   font-size: 17px;
+}
+
+.description {
+   font-size: 11px;
+   font-weight: 700;
+}
+
+.strong,
+.low {
+   color: #166534;
+   border-color: #bbf7d0;
+   background: #f0fdf4;
+}
+
+.moderate {
+   color: #a16207;
+   border-color: #fde68a;
+   background: #fffbeb;
+}
+
+.weak,
+.high {
+   color: #b42318;
+   border-color: #fecaca;
+   background: #fef2f2;
+}
+
+.neutral {
+   color: #64748b;
+   border-color: #e2e8f0;
+   background: #f8fafc;
+}
+
+.neutral strong {
+   font-size: 13px;
+}
