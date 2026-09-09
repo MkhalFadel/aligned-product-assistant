@@ -56,6 +56,8 @@
 }
 
 .summaryCard,
+.customerSummary,
+.feedbackCard,
 .stateCard,
 .errorState {
    border: 1px solid #e2e8f0;
@@ -65,6 +67,12 @@
 }
 
 .summaryCard {
+   padding: 24px;
+}
+
+.customerSummary,
+.feedbackCard {
+   margin-top: 20px;
    padding: 24px;
 }
 
@@ -108,6 +116,8 @@
 }
 
 .summaryHeader h2,
+.customerSummary h2,
+.feedbackCard h2,
 .history h2 {
    margin: 0;
    color: #172033;
@@ -164,6 +174,49 @@
    margin-top: 20px;
 }
 
+.customerSummary p,
+.feedbackCard > p {
+   margin: 14px 0 0;
+   color: #475569;
+   font-size: 14px;
+   line-height: 1.6;
+   white-space: pre-wrap;
+}
+
+.feedbackDetails {
+   display: grid;
+   grid-template-columns: repeat(2, minmax(0, 1fr));
+   gap: 14px;
+   margin: 18px 0 0;
+}
+
+.feedbackDetails div {
+   padding: 12px;
+   border-radius: 8px;
+   background: #f8fafc;
+}
+
+.feedbackDetails dt {
+   color: #64748b;
+   font-size: 11px;
+   font-weight: 800;
+   letter-spacing: 0.06em;
+   text-transform: uppercase;
+}
+
+.feedbackDetails dd {
+   margin: 6px 0 0;
+   overflow-wrap: anywhere;
+   color: #172033;
+   font-size: 13px;
+   font-weight: 700;
+   line-height: 1.5;
+}
+
+.feedbackDetails .feedbackComment {
+   grid-column: 1 / -1;
+}
+
 .history {
    margin-top: 30px;
 }
@@ -197,6 +250,10 @@
    .metadata {
       grid-template-columns: repeat(2, minmax(0, 1fr));
    }
+
+   .feedbackDetails {
+      grid-template-columns: 1fr;
+   }
 }
 
 @media (max-width: 460px) {
@@ -206,6 +263,10 @@
 
    .metadata {
       grid-template-columns: 1fr;
+   }
+
+   .feedbackDetails .feedbackComment {
+      grid-column: auto;
    }
 
    .scoreSummary > * {

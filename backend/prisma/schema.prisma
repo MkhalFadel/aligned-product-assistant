@@ -57,6 +57,7 @@ model Conversation {
   startedAt        DateTime           @default(now()) @map("started_at")
   endedAt          DateTime?          @map("ended_at")
   reportToken      String             @unique @map("report_token")
+  summary          String?            @map("summary") @db.Text
   createdAt        DateTime           @default(now()) @map("created_at")
   messages         Message[]
   feedback         Feedback?

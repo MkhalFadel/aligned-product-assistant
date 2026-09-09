@@ -1,5 +1,6 @@
 const { randomUUID } = require("crypto");
 const prisma = require("../lib/prisma");
+const aiService = require("./aiService");
 
 function serializeNumber(value) {
    if (value === null || value === undefined) {
@@ -71,13 +72,98 @@ function getConversationSummary(messages) {
    };
 }
 
+function getFallbackSummary(messages, detectedLanguage) {
+   const uniqueMessages = [];
+   const seenMessages = new Set();
+
+   messages.forEach((message) => {
+      const content = message.content.trim().replace(/\s+/g, " ");
+      const comparisonValue = content.toLowerCase();
+
+      if (content && !seenMessages.has(comparisonValue)) {
+         seenMessages.add(comparisonValue);
+         uniqueMessages.push(content);
+      }
+   });
+   const content = uniqueMessages
+      .slice(0, 3)
+      .join(" · ");
+
+   if (!content) {
+      return null;
+   }
+
+   const prefix = detectedLanguage === "MIXED"
+      ? "Customer is looking for:"
+      : "Customer request:";
+   const condensedContent = content.length > 300 ? `${content.slice(0, 297)}...` : content;
+
+   return `${prefix} ${condensedContent}`;
+}
+
+async function createConversationSummary(messages, detectedLanguage) {
+   const fallbackSummary = getFallbackSummary(messages, detectedLanguage);
+
+   if (!fallbackSummary) {
+      return null;
+   }
+
+   try {
+      return await aiService.generateConversationSummary({ messages, detectedLanguage });
+   } catch (error) {
+      console.error("Conversation summary generation failed", { code: error.code });
+
+      return fallbackSummary;
+   }
+}
+
+async function updateDetectedLanguage(id, language, database = prisma) {
+   const singularLanguages = ["ENGLISH", "ARABIZI", "ARABIC"];
+   const languagesToMix = language === "MIXED"
+      ? singularLanguages
+      : singularLanguages.filter((value) => value !== language);
+
+   await database.conversation.updateMany({
+      where: {
+         id,
+         detectedLanguage: null
+      },
+      data: { detectedLanguage: language }
+   });
+
+   // A different user language can only promote the conversation to MIXED.
+   await database.conversation.updateMany({
+      where: {
+         id,
+         detectedLanguage: { in: languagesToMix }
+      },
+      data: { detectedLanguage: "MIXED" }
+   });
+}
+
+function serializeFeedback(feedback) {
+   if (!feedback) {
+      return null;
+   }
+
+   return {
+      rating: feedback.rating,
+      comment: feedback.comment,
+      createdAt: feedback.createdAt
+   };
+}
+
 function serializeConversation(conversation, { includeMessages = false } = {}) {
    if (!conversation) {
       return null;
    }
 
-   const { _count, messages, ...conversationData } = conversation;
+   const { _count, messages, feedback, ...conversationData } = conversation;
    const serializedConversation = { ...conversationData };
+
+   if (feedback !== undefined) {
+      serializedConversation.feedback = serializeFeedback(feedback);
+   }
 
    if (_count) {
       serializedConversation.messageCount = _count.messages;
@@ -143,6 +229,13 @@ async function getConversationById(id) {
    const conversation = await prisma.conversation.findUnique({
       where: { id },
       include: {
+         feedback: {
+            select: {
+               rating: true,
+               comment: true,
+               createdAt: true
+            }
+         },
          messages: {
             orderBy: { createdAt: "asc" },
             include: {
@@ -182,14 +275,7 @@ async function addMessage(id, messageData) {
    });
 
    if (messageData.role === "USER") {
-      // The first user language wins; later messages cannot overwrite it.
-      await prisma.conversation.updateMany({
-         where: {
-            id,
-            detectedLanguage: null
-         },
-         data: { detectedLanguage: messageData.language }
-      });
+      await updateDetectedLanguage(id, messageData.language);
    }
 
    return {
@@ -200,7 +286,17 @@ async function addMessage(id, messageData) {
 
 async function endConversation(id) {
    const conversation = await prisma.conversation.findUnique({
-      where: { id }
+      where: { id },
+      include: {
+         messages: {
+            where: { role: "USER" },
+            orderBy: { createdAt: "asc" },
+            select: {
+               content: true,
+               language: true
+            }
+         }
+      }
    });
 
    if (!conversation) {
@@ -220,7 +316,27 @@ async function endConversation(id) {
       }
    });
 
-   return serializeConversation(endedConversation);
+   // Generate and cache the user-request summary once so report reads stay cost-free.
+   const summary = await createConversationSummary(
+      conversation.messages,
+      conversation.detectedLanguage
+   );
+
+   if (summary) {
+      try {
+         await prisma.conversation.update({
+            where: { id },
+            data: { summary }
+         });
+      } catch (error) {
+         console.error("Conversation summary persistence failed", { code: error.code });
+      }
+   }
+
+   return serializeConversation({
+      ...endedConversation,
+      summary: summary || endedConversation.summary
+   });
 }
 
 module.exports = {
@@ -229,5 +345,7 @@ module.exports = {
    getConversationById,
    addMessage,
    endConversation,
-   serializeMessage
+   serializeMessage,
+   getFallbackSummary,
+   updateDetectedLanguage
 };

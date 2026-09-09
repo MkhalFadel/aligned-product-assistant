@@ -61,6 +61,15 @@ const claimEvaluationSchema = {
    required: ["claims"]
 };
 
+const summarySchema = {
+   type: "object",
+   additionalProperties: false,
+   properties: {
+      summary: { type: "string" }
+   },
+   required: ["summary"]
+};
+
 function createAiError(message, code) {
    const error = new Error(message);
    error.code = code;
@@ -211,6 +220,24 @@ function parseClaimEvaluation(responseText) {
    }));
 }
 
+function parseConversationSummary(responseText) {
+   let output;
+
+   try {
+      output = JSON.parse(responseText);
+   } catch {
+      throw createAiError("Gemini returned malformed summary output", "GEMINI_RESPONSE_ERROR");
+   }
+
+   if (!isPlainObject(output)
+      || typeof output.summary !== "string"
+      || output.summary.trim() === "") {
+      throw createAiError("Gemini returned invalid summary output", "GEMINI_RESPONSE_ERROR");
+   }
+
+   return output.summary.trim();
+}
+
 function getClient() {
    const apiKey = process.env.GEMINI_API_KEY?.trim();
 
@@ -293,6 +320,31 @@ function buildClaimEvaluatorInstructions() {
    ].join("\n");
 }
 
+function buildSummaryInstructions(language) {
+   const languageInstructions = {
+      ENGLISH: "Write the summary in English.",
+      ARABIZI: "Write the summary in natural Lebanese Arabizi without Arabic script.",
+      ARABIC: "Write the summary in Arabic script.",
+      // Mixed conversations use the dominant language or concise English when tied.
+      MIXED: [
+         "Write the entire summary in one natural language.",
+         "If one USER-message language clearly dominates, use that language. If no language dominates, use concise English.",
+         "Do not switch between English, Lebanese Arabizi, and Arabic script within the summary."
+      ].join(" ")
+   };
+
+   return [
+      "You summarize a customer's hardware-shopping request.",
+      "Use only the supplied USER messages. Never use assistant messages, recommendations, or catalogue details.",
+      "Synthesize the customer's needs instead of concatenating or repeating their messages.",
+      "Combine repeated requirements and remove conversational filler while preserving explicitly stated budget, product category, intended use, portability, compatibility, and requested features.",
+      "Do not add requirements, product facts, prices, specifications, or compatibility details the customer did not mention.",
+      "Write a direct summary of the requirements rather than referring to the person as the customer.",
+      "Keep the result customer-friendly and concise, ideally one to three sentences.",
+      languageInstructions[language] || languageInstructions.MIXED
+   ].join("\n");
+}
+
 // Calls the provider with strict JSON output and no access to database concerns.
 async function generateAssistantResponse({ language, history, catalogue }) {
    const responseText = await generateStructuredResponse({
@@ -328,7 +380,32 @@ async function evaluateAssistantClaims({ customerMessage, assistantAnswer, recom
    return parseClaimEvaluation(responseText);
 }
 
+// Produces a cached report summary from customer messages without catalogue context.
+async function generateConversationSummary({ messages, detectedLanguage }) {
+   const contents = [{
+      role: "user",
+      parts: [{
+         text: JSON.stringify({
+            conversationLanguage: detectedLanguage,
+            customerMessages: messages.map((message) => ({
+               content: message.content,
+               language: message.language
+            }))
+         })
+      }]
+   }];
+   const responseText = await generateStructuredResponse({
+      instructions: buildSummaryInstructions(detectedLanguage),
+      contents,
+      schema: summarySchema,
+      maxOutputTokens: 160
+   });
+
+   return parseConversationSummary(responseText);
+}
+
 module.exports = {
    generateAssistantResponse,
-   evaluateAssistantClaims
+   evaluateAssistantClaims,
+   generateConversationSummary
 };

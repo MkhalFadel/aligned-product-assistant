@@ -140,6 +140,34 @@ function ConversationDetails() {
                      </div>
                   </section>
 
+                  <section className={styles.customerSummary} aria-labelledby="customer-summary-heading">
+                     <h2 id="customer-summary-heading">Customer request summary</h2>
+                     <p>{conversation.summary || 'No customer request summary is available for this conversation.'}</p>
+                  </section>
+
+                  <section className={styles.feedbackCard} aria-labelledby="feedback-heading">
+                     <h2 id="feedback-heading">Customer feedback</h2>
+                     {!conversation.feedback && <p>No customer feedback submitted yet.</p>}
+                     {conversation.feedback && (
+                        <dl className={styles.feedbackDetails}>
+                           <div>
+                              <dt>Rating</dt>
+                              <dd>{conversation.feedback.rating} out of 5</dd>
+                           </div>
+                           <div>
+                              <dt>Submitted</dt>
+                              <dd>{formatDateTime(conversation.feedback.createdAt)}</dd>
+                           </div>
+                           {conversation.feedback.comment && (
+                              <div className={styles.feedbackComment}>
+                                 <dt>Comment</dt>
+                                 <dd>{conversation.feedback.comment}</dd>
+                              </div>
+                           )}
+                        </dl>
+                     )}
+                  </section>
+
                   <section className={styles.history} aria-labelledby="history-heading">
                      <h2 id="history-heading">Message history</h2>
                      {conversation.messages.length === 0 && (

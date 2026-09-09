@@ -53,6 +53,17 @@ function isRecommendation(recommendation) {
       && (recommendation.product === null || isRecord(recommendation.product))
 }
 
+function isFeedback(feedback) {
+   return feedback === null || (
+      isRecord(feedback)
+      && Number.isInteger(feedback.rating)
+      && feedback.rating >= 1
+      && feedback.rating <= 5
+      && (feedback.comment === null || typeof feedback.comment === 'string')
+      && typeof feedback.createdAt === 'string'
+   )
+}
+
 function isConversationMessage(message) {
    return isRecord(message)
       && typeof message.id === 'string'
@@ -89,7 +100,10 @@ export async function getConversationById(id) {
    const data = await request(`/api/conversations/${id}`)
    const conversation = getConversation(data, 'Conversation API returned an invalid conversation.')
 
-   if (!Array.isArray(conversation.messages) || !conversation.messages.every(isConversationMessage)) {
+   if (!Array.isArray(conversation.messages)
+      || !conversation.messages.every(isConversationMessage)
+      || (conversation.summary !== null && typeof conversation.summary !== 'string')
+      || !isFeedback(conversation.feedback)) {
       throw new Error('Conversation API returned an invalid message history.')
    }
 

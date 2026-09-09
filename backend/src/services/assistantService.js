@@ -2,7 +2,7 @@ const prisma = require("../lib/prisma");
 const aiService = require("./aiService");
 const scoringService = require("./scoringService");
 const { buildCatalogueContext } = require("./catalogueContextService");
-const { serializeMessage } = require("./conversationService");
+const { serializeMessage, updateDetectedLanguage } = require("./conversationService");
 
 function createAssistantError(message, code) {
    const error = new Error(message);
@@ -81,23 +81,20 @@ async function addUserMessageAndRespond(id, messageData) {
       return { hasEnded: true };
    }
 
-   const [userMessage] = await prisma.$transaction([
-      prisma.message.create({
+   const userMessage = await prisma.$transaction(async (transaction) => {
+      const message = await transaction.message.create({
          data: {
             conversationId: id,
             role: "USER",
             content: messageData.content,
             language: messageData.language
          }
-      }),
-      prisma.conversation.updateMany({
-         where: {
-            id,
-            detectedLanguage: null
-         },
-         data: { detectedLanguage: messageData.language }
-      })
-   ]);
+      });
+
+      await updateDetectedLanguage(id, messageData.language, transaction);
+
+      return message;
+   });
 
    const [history, activeProducts, assistantSettings] = await Promise.all([
       prisma.message.findMany({
