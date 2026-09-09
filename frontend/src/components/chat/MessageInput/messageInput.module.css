@@ -1,0 +1,83 @@
+.form {
+   padding: 16px;
+   border-top: 1px solid #e2e8f0;
+   background: #fff;
+}
+
+.label {
+   display: block;
+   margin-bottom: 8px;
+   color: #334155;
+   font-size: 12px;
+   font-weight: 800;
+   letter-spacing: 0.05em;
+   text-transform: uppercase;
+}
+
+.controls {
+   display: flex;
+   align-items: flex-end;
+   gap: 10px;
+}
+
+.controls textarea {
+   width: 100%;
+   min-height: 48px;
+   flex: 1;
+   padding: 11px;
+   color: #172033;
+   border: 1px solid #cbd5e1;
+   border-radius: 8px;
+   outline: none;
+   resize: vertical;
+   font-size: 14px;
+   line-height: 1.45;
+}
+
+.controls textarea:focus {
+   border-color: #2563eb;
+   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.controls textarea:disabled {
+   color: #64748b;
+   background: #f8fafc;
+}
+
+.controls button {
+   min-height: 42px;
+   flex: 0 0 auto;
+   padding: 0 15px;
+   color: #fff;
+   border: 1px solid #1d4ed8;
+   border-radius: 8px;
+   background: #2563eb;
+   font-size: 13px;
+   font-weight: 700;
+}
+
+.controls button:hover:not(:disabled) {
+   background: #1d4ed8;
+}
+
+.controls button:disabled {
+   opacity: 0.6;
+}
+
+.hint {
+   margin: 8px 0 0;
+   color: #64748b;
+   font-size: 11px;
+   line-height: 1.4;
+}
+
+@media (max-width: 480px) {
+   .controls {
+      align-items: stretch;
+      flex-direction: column;
+   }
+
+   .controls button {
+      width: 100%;
+   }
+}
