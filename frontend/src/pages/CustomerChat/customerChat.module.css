@@ -243,12 +243,22 @@
 }
 
 @media (max-width: 540px) {
+   .navigation {
+      align-items: flex-start;
+      flex-direction: column;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 0;
+   }
+
    .brand {
       font-size: 15px;
    }
 
-   .navLinks span {
-      display: none;
+   .navLinks {
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      font-size: 12px;
    }
 
    .welcomeState,

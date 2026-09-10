@@ -5,6 +5,7 @@ const allowedClaimTypes = ["exact_fact", "comparison", "suitability", "subjectiv
 const allowedClaimAssessments = ["SUPPORTED", "UNSUPPORTED", "SUBJECTIVE_REASONABLE", "NOT_APPLICABLE"];
 const defaultModel = "gemini-3.1-flash-lite";
 const requestTimeoutMs = 20000;
+const transientRetryDelayMs = 500;
 
 const responseSchema = {
    type: "object",
@@ -70,9 +71,15 @@ const summarySchema = {
    required: ["summary"]
 };
 
-function createAiError(message, code) {
+function createAiError(message, code, isRetryable = false, details = {}) {
    const error = new Error(message);
    error.code = code;
+   error.isRetryable = isRetryable;
+   error.providerName = details.providerName || null;
+   error.providerMessage = details.providerMessage || null;
+   error.providerStatus = details.providerStatus || null;
+   error.providerCode = details.providerCode || null;
+   error.failureType = details.failureType || null;
 
    return error;
 }
@@ -117,6 +124,7 @@ function buildInstructions(language) {
       "Do not infer unlisted technical benefits from a catalogue specification or call a specification suitable, capable, or powerful for a task unless the catalogue explicitly says so.",
       "Recommendation reasons must cite only the product details explicitly present in the catalogue.",
       "Every recommended product must use its exact productId from the catalogue.",
+      "Keep the response concise and recommend no more than three products in one response.",
       "If no catalogue product fits, clearly say the catalogue does not contain a suitable option and return an empty recommendedProducts array.",
       "Use only catalogue data when explaining recommendations or comparisons.",
       getLanguageInstruction(language)
@@ -173,7 +181,7 @@ function parseAssistantResponse(responseText) {
    try {
       output = JSON.parse(responseText);
    } catch {
-      throw createAiError("AI provider returned malformed structured output", "GEMINI_RESPONSE_ERROR");
+      throw createAiError("AI provider returned malformed structured output", "GEMINI_MALFORMED_RESPONSE_ERROR", true);
    }
 
    if (!isPlainObject(output)
@@ -182,7 +190,7 @@ function parseAssistantResponse(responseText) {
       || !allowedLanguages.includes(output.language)
       || !Array.isArray(output.recommendedProducts)
       || !output.recommendedProducts.every(validateRecommendation)) {
-      throw createAiError("AI provider returned invalid structured output", "GEMINI_RESPONSE_ERROR");
+      throw createAiError("AI provider returned invalid structured output", "GEMINI_SCHEMA_ERROR", true);
    }
 
    return {
@@ -201,13 +209,13 @@ function parseClaimEvaluation(responseText) {
    try {
       output = JSON.parse(responseText);
    } catch {
-      throw createAiError("Gemini returned malformed scoring output", "SCORING_RESPONSE_ERROR");
+      throw createAiError("Gemini returned malformed scoring output", "SCORING_MALFORMED_RESPONSE_ERROR", true);
    }
 
    if (!isPlainObject(output)
       || !Array.isArray(output.claims)
       || !output.claims.every(validateClaim)) {
-      throw createAiError("Gemini returned invalid scoring output", "SCORING_RESPONSE_ERROR");
+      throw createAiError("Gemini returned invalid scoring output", "SCORING_SCHEMA_ERROR", true);
    }
 
    return output.claims.map((claim) => ({
@@ -258,17 +266,89 @@ function getResponseText(response) {
       "SPII"
    ];
 
-   if (response.promptFeedback?.blockReason
-      || !candidate
-      || blockedReasons.includes(candidate.finishReason)) {
-      throw createAiError("Gemini blocked the response", "GEMINI_RESPONSE_ERROR");
+   if (response.promptFeedback?.blockReason || blockedReasons.includes(candidate?.finishReason)) {
+      throw createAiError("Gemini blocked the response", "GEMINI_BLOCKED_RESPONSE_ERROR");
    }
 
-   if (typeof response.text !== "string" || response.text.trim() === "") {
-      throw createAiError("Gemini returned an empty response", "GEMINI_RESPONSE_ERROR");
+   if (!candidate) {
+      throw createAiError("Gemini returned no candidate", "GEMINI_NO_CANDIDATE_ERROR", true);
    }
 
-   return response.text;
+   let responseText;
+
+   try {
+      responseText = response.text;
+   } catch {
+      throw createAiError("Gemini returned an empty response", "GEMINI_EMPTY_RESPONSE_ERROR", true);
+   }
+
+   if (typeof responseText !== "string" || responseText.trim() === "") {
+      throw createAiError("Gemini returned an empty response", "GEMINI_EMPTY_RESPONSE_ERROR", true);
+   }
+
+   return responseText;
+}
+
+function getProviderErrorDetails(error) {
+   const status = Number(error.status);
+   const providerStatus = Number.isFinite(status) ? status : null;
+   const providerCode = typeof error.code === "string"
+      ? error.code
+      : typeof error.cause?.code === "string"
+         ? error.cause.code
+         : null;
+   const providerMessage = typeof error.message === "string"
+      ? error.message.slice(0, 300)
+      : null;
+   const isFetchFailure = error.name === "TypeError"
+      && /fetch failed/i.test(error.message || "");
+   let failureType = "provider failure";
+
+   if (error.name === "AbortError") {
+      failureType = "timeout";
+   } else if (isFetchFailure || ["ECONNRESET", "ETIMEDOUT", "EAI_AGAIN"].includes(providerCode)) {
+      failureType = "network/fetch failure";
+   } else if (providerStatus === 429 || providerCode === "RESOURCE_EXHAUSTED") {
+      failureType = "provider quota";
+   } else if (providerStatus === 503 || providerCode === "UNAVAILABLE") {
+      failureType = "provider 503";
+   }
+
+   return {
+      providerName: error.name || null,
+      providerMessage,
+      providerStatus,
+      providerCode,
+      failureType
+   };
+}
+
+function isTransientProviderError(error) {
+   const { providerStatus, providerCode, failureType } = getProviderErrorDetails(error);
+
+   return error.name === "AbortError"
+      || failureType === "network/fetch failure"
+      || providerStatus === 408
+      || providerStatus === 429
+      || providerStatus >= 500
+      || ["ECONNRESET", "ETIMEDOUT", "EAI_AGAIN"].includes(providerCode);
+}
+
+function isAiServiceError(error) {
+   return typeof error.code === "string"
+      && (error.code.startsWith("GEMINI_") || error.code.startsWith("SCORING_"));
+}
+
+function shouldDelayRetry(error) {
+   return error.code === "GEMINI_PROVIDER_ERROR" || error.code === "GEMINI_TIMEOUT_ERROR";
+}
+
+function canUseExtendedGenerationRetry(operation, error, attempt) {
+   return operation === "assistant response"
+      && attempt === 1
+      && (error.code === "GEMINI_TIMEOUT_ERROR"
+         || error.failureType === "network/fetch failure"
+         || error.failureType === "provider 503");
 }
 
 async function generateStructuredResponse({ instructions, contents, schema, maxOutputTokens }) {
@@ -292,19 +372,72 @@ async function generateStructuredResponse({ instructions, contents, schema, maxO
 
       return getResponseText(response);
    } catch (error) {
-      if (error.code === "GEMINI_CONFIGURATION_ERROR" || error.code === "GEMINI_RESPONSE_ERROR") {
+      if (isAiServiceError(error)) {
          throw error;
       }
 
-      console.error("Gemini response generation failed", {
-         name: error.name,
-         status: error.status,
-         code: error.code
+      const providerDetails = getProviderErrorDetails(error);
+      const isTimeout = providerDetails.failureType === "timeout";
+
+      console.error("Gemini request failed", {
+         type: providerDetails.failureType,
+         name: providerDetails.providerName,
+         message: providerDetails.providerMessage,
+         status: providerDetails.providerStatus,
+         code: providerDetails.providerCode
       });
 
-      throw createAiError("Unable to generate an assistant response right now", "GEMINI_PROVIDER_ERROR");
+      if (isTimeout) {
+         throw createAiError("Gemini request timed out", "GEMINI_TIMEOUT_ERROR", true, providerDetails);
+      }
+
+      throw createAiError(
+         "Unable to generate an assistant response right now",
+         "GEMINI_PROVIDER_ERROR",
+         isTransientProviderError(error),
+         providerDetails
+      );
    } finally {
       clearTimeout(timeout);
+   }
+}
+
+// Retries once for retryable output failures and a third time only for transient generation failures.
+async function runWithRetry(operation, callback) {
+   for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+         return await callback();
+      } catch (error) {
+         error.retryAttempt = attempt + 1;
+         error.operation = operation;
+         const canUseStandardRetry = attempt === 0 && error.isRetryable;
+         const canUseExtendedRetry = canUseExtendedGenerationRetry(operation, error, attempt);
+
+         if (!canUseStandardRetry && !canUseExtendedRetry) {
+            error.retryMaximumAttempts = attempt + 1;
+
+            throw error;
+         }
+
+         error.retryMaximumAttempts = attempt + 2;
+
+         console.warn("Retrying Gemini request", {
+            operation,
+            attempt: attempt + 1,
+            nextAttempt: attempt + 2,
+            classification: error.failureType || error.code,
+            name: error.providerName || error.name,
+            message: error.providerMessage || error.message,
+            status: error.providerStatus,
+            code: error.providerCode || error.code
+         });
+
+         if (shouldDelayRetry(error)) {
+            const delay = transientRetryDelayMs * (attempt + 1);
+
+            await new Promise((resolve) => setTimeout(resolve, delay));
+         }
+      }
    }
 }
 
@@ -347,14 +480,16 @@ function buildSummaryInstructions(language) {
 
 // Calls the provider with strict JSON output and no access to database concerns.
 async function generateAssistantResponse({ language, history, catalogue }) {
-   const responseText = await generateStructuredResponse({
-      instructions: buildInstructions(language),
-      contents: buildModelContents(history, catalogue),
-      schema: responseSchema,
-      maxOutputTokens: 600
-   });
+   return runWithRetry("assistant response", async () => {
+      const responseText = await generateStructuredResponse({
+         instructions: buildInstructions(language),
+         contents: buildModelContents(history, catalogue),
+         schema: responseSchema,
+         maxOutputTokens: 800
+      });
 
-   return parseAssistantResponse(responseText);
+      return parseAssistantResponse(responseText);
+   });
 }
 
 async function evaluateAssistantClaims({ customerMessage, assistantAnswer, recommendations, catalogue, deterministicFindings }) {
@@ -370,14 +505,16 @@ async function evaluateAssistantClaims({ customerMessage, assistantAnswer, recom
          })
       }]
    }];
-   const responseText = await generateStructuredResponse({
-      instructions: buildClaimEvaluatorInstructions(),
-      contents,
-      schema: claimEvaluationSchema,
-      maxOutputTokens: 800
-   });
+   return runWithRetry("assistant scoring", async () => {
+      const responseText = await generateStructuredResponse({
+         instructions: buildClaimEvaluatorInstructions(),
+         contents,
+         schema: claimEvaluationSchema,
+         maxOutputTokens: 800
+      });
 
-   return parseClaimEvaluation(responseText);
+      return parseClaimEvaluation(responseText);
+   });
 }
 
 // Produces a cached report summary from customer messages without catalogue context.

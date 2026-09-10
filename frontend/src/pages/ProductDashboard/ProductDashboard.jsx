@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import ConfirmModal from '../../components/common/ConfirmModal/ConfirmModal'
 import FeedbackMessage from '../../components/common/FeedbackMessage/FeedbackMessage'
+import DashboardNav from '../../components/dashboard/DashboardNav/DashboardNav'
 import ProductForm from '../../components/products/ProductForm/ProductForm'
 import ProductTable from '../../components/products/ProductTable/ProductTable'
 import {
@@ -232,6 +233,7 @@ function ProductDashboard() {
    return (
       <main className={styles.page}>
          <div className={styles.content}>
+            <DashboardNav />
             <header className={styles.header}>
                <div>
                   <p className={styles.eyebrow}>Catalogue management</p>

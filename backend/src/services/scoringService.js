@@ -389,6 +389,72 @@ function getFlagReasons(findings, hallucinationRisk, threshold) {
    return flagReasons;
 }
 
+function buildScoreResult(findings, highRiskThreshold) {
+   const scores = calculateScores(findings);
+   const threshold = resolveHighRiskThreshold(highRiskThreshold);
+   const flagReasons = getFlagReasons(findings, scores.hallucinationRisk, threshold);
+
+   return {
+      accuracyScore: scores.accuracyScore,
+      hallucinationRisk: scores.hallucinationRisk,
+      // Critical catalogue errors trigger review even below the aggregate risk threshold.
+      isFlagged: flagReasons.length > 0,
+      details: {
+         totalClaims: scores.totalClaims,
+         supportedClaims: scores.supportedClaims,
+         unsupportedClaims: scores.unsupportedClaims,
+         flagReasons,
+         deterministicFailures: findings.filter((finding) => (
+            finding.source === "deterministic" && finding.assessment === "UNSUPPORTED"
+         )),
+         semanticFindings: findings.filter((finding) => finding.source === "semantic")
+      }
+   };
+}
+
+function getDeterministicFallbackScore(deterministicFindings) {
+   const fallbackFindings = [...deterministicFindings, {
+      text: "Unverified assistant content",
+      claimType: "unknown",
+      field: "unverifiedContent",
+      value: "semantic-scoring-unavailable",
+      assessment: "UNSUPPORTED",
+      severityKey: "inventedSpecification",
+      source: "fallback"
+   }];
+   const scores = calculateScores(fallbackFindings);
+
+   return {
+      accuracyScore: scores.accuracyScore,
+      hallucinationRisk: scores.hallucinationRisk,
+      isFlagged: true,
+      details: {
+         totalClaims: scores.totalClaims,
+         supportedClaims: scores.supportedClaims,
+         unsupportedClaims: scores.unsupportedClaims,
+         flagReasons: ["Semantic scoring unavailable"],
+         deterministicFailures: deterministicFindings.filter((finding) => finding.assessment === "UNSUPPORTED"),
+         semanticFindings: []
+      }
+   };
+}
+
+function getUltimateConservativeScore() {
+   return {
+      accuracyScore: 0,
+      hallucinationRisk: 100,
+      isFlagged: true,
+      details: {
+         totalClaims: 0,
+         supportedClaims: 0,
+         unsupportedClaims: 0,
+         flagReasons: ["Scoring fallback unavailable"],
+         deterministicFailures: [],
+         semanticFindings: []
+      }
+   };
+}
+
 async function scoreAssistantResponse({
    customerMessage,
    assistantAnswer,
@@ -400,12 +466,24 @@ async function scoreAssistantResponse({
       throw createScoringError("Assistant answer is required for scoring", "SCORING_ERROR");
    }
 
+   let deterministicFindings;
+
    try {
-      const deterministicFindings = getDeterministicFindings(
+      deterministicFindings = getDeterministicFindings(
          assistantAnswer,
          recommendations,
          activeProducts
       );
+   } catch (error) {
+      console.error("Deterministic scoring failed; using conservative scores", {
+         name: error.name,
+         code: error.code
+      });
+
+      return getUltimateConservativeScore();
+   }
+
+   try {
       const semanticClaims = await aiService.evaluateAssistantClaims({
          customerMessage,
          assistantAnswer,
@@ -418,37 +496,24 @@ async function scoreAssistantResponse({
          deterministicFindings,
          activeProducts
       );
-      const findings = [...deterministicFindings, ...semanticFindings];
-      const scores = calculateScores(findings);
-      const threshold = resolveHighRiskThreshold(highRiskThreshold);
-      const flagReasons = getFlagReasons(findings, scores.hallucinationRisk, threshold);
-
-      return {
-         accuracyScore: scores.accuracyScore,
-         hallucinationRisk: scores.hallucinationRisk,
-         // Critical catalogue errors trigger review even below the aggregate risk threshold.
-         isFlagged: flagReasons.length > 0,
-         details: {
-            totalClaims: scores.totalClaims,
-            supportedClaims: scores.supportedClaims,
-            unsupportedClaims: scores.unsupportedClaims,
-            flagReasons,
-            deterministicFailures: deterministicFindings.filter((finding) => finding.assessment === "UNSUPPORTED"),
-            semanticFindings
-         }
-      };
+      return buildScoreResult(
+         [...deterministicFindings, ...semanticFindings],
+         highRiskThreshold
+      );
    } catch (error) {
-      if (error.code === "GEMINI_CONFIGURATION_ERROR"
-         || error.code === "GEMINI_PROVIDER_ERROR"
-         || error.code === "GEMINI_RESPONSE_ERROR"
-         || error.code === "SCORING_RESPONSE_ERROR"
-         || error.code === "SCORING_ERROR") {
-         throw error;
+      console.warn("Semantic scoring unavailable; using deterministic fallback", {
+         code: error.code
+      });
+      try {
+         return getDeterministicFallbackScore(deterministicFindings);
+      } catch (fallbackError) {
+         console.error("Deterministic scoring fallback failed; using conservative scores", {
+            name: fallbackError.name,
+            code: fallbackError.code
+         });
+
+         return getUltimateConservativeScore();
       }
-
-      console.error("Assistant scoring failed", { name: error.name, code: error.code });
-
-      throw createScoringError("Unable to score the assistant response", "SCORING_ERROR");
    }
 }
 

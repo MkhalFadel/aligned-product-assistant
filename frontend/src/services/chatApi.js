@@ -4,9 +4,10 @@ function isRecord(value) {
    return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function createApiError(message, status) {
+function createApiError(message, status, details) {
    const error = new Error(message)
    error.status = status
+   error.userMessageStored = details?.userMessageStored === true
 
    return error
 }
@@ -26,7 +27,7 @@ async function request(path, options) {
    }
 
    if (!response.ok) {
-      throw createApiError(data.message || 'Chat request failed', response.status)
+      throw createApiError(data.message || 'Chat request failed', response.status, data)
    }
 
    return data
