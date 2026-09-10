@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import styles from './recommendedProducts.module.css'
 
 function formatPrice(price) {
@@ -43,6 +44,7 @@ function RecommendedProducts({ recommendations }) {
                      <strong>{recommendation.product.name}</strong>
                      <span className={styles.productDetails}>{recommendation.product.category} · {formatPrice(recommendation.product.price)}</span>
                      <p>{recommendation.reason}</p>
+                     <Link className={styles.detailsLink} to={`/products/${recommendation.product.id}`}>View details</Link>
                   </div>
                </li>
             ))}

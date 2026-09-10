@@ -16,7 +16,8 @@ async function getAllProducts(req, res, next) {
 
 async function getProductById(req, res, next) {
    try {
-      const product = await productService.getProductById(req.params.id);
+      const activeOnly = req.query.activeOnly === "true";
+      const product = await productService.getProductById(req.params.id, activeOnly);
 
       if (!product) {
          return res.status(404).json({ message: "Product not found" });

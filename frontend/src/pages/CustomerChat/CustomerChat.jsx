@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import ChatMessage from '../../components/chat/ChatMessage/ChatMessage'
 import MessageInput from '../../components/chat/MessageInput/MessageInput'
 import ConfirmModal from '../../components/common/ConfirmModal/ConfirmModal'
@@ -48,6 +48,7 @@ function getEndErrorMessage(error) {
 
 // Manages one customer conversation without creating a record until the first send.
 function CustomerChat() {
+   const location = useLocation()
    const [conversationId, setConversationId] = useState('')
    const [messages, setMessages] = useState([])
    const [input, setInput] = useState('')
@@ -62,6 +63,24 @@ function CustomerChat() {
    const isEndingRef = useRef(false)
    const endButtonRef = useRef(null)
    const messageEndRef = useRef(null)
+   const appliedPrefillKeyRef = useRef('')
+
+   useEffect(() => {
+      const { productId, productName } = location.state || {}
+
+      if (appliedPrefillKeyRef.current === location.key
+         || typeof productId !== 'string'
+         || typeof productName !== 'string'
+         || !productName.trim()
+         || conversationId
+         || messages.length > 0) {
+         return
+      }
+
+      // Prefills the message from a product page without starting a conversation.
+      setInput(`Tell me more about ${productName.trim()} and whether it fits my needs.`)
+      appliedPrefillKeyRef.current = location.key
+   }, [conversationId, location.key, location.state, messages.length])
 
    useEffect(() => {
       if (messages.length > 0) {

@@ -229,6 +229,11 @@ function ConversationReport() {
                                     <h3>{product.name}</h3>
                                     <p className={styles.productDetails}>{product.category} · {formatPrice(product.price)}</p>
                                     <p>{product.reason}</p>
+                                    {product.isAvailable ? (
+                                       <Link className={styles.detailsLink} to={`/products/${product.id}`}>View details</Link>
+                                    ) : (
+                                       <span className={styles.unavailable}>Currently unavailable</span>
+                                    )}
                                  </div>
                               </li>
                            ))}

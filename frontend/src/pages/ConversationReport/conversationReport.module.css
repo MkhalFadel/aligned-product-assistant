@@ -221,6 +221,32 @@
    line-height: 1.5;
 }
 
+.detailsLink,
+.unavailable {
+   display: inline-flex;
+   margin-top: 10px;
+   font-size: 12px;
+   font-weight: 800;
+}
+
+.detailsLink {
+   color: #1d4ed8;
+   text-decoration: none;
+}
+
+.detailsLink:hover {
+   text-decoration: underline;
+}
+
+.unavailable {
+   color: #64748b;
+}
+
+.detailsLink:focus-visible {
+   outline: 3px solid rgba(37, 99, 235, 0.32);
+   outline-offset: 3px;
+}
+
 .feedbackForm {
    display: grid;
    gap: 18px;

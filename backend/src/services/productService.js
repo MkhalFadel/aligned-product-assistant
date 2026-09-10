@@ -22,10 +22,15 @@ async function getAllProducts(includeInactive) {
    return products.map(serializeProduct);
 }
 
-async function getProductById(id) {
+async function getProductById(id, activeOnly = false) {
    const product = await prisma.product.findUnique({
       where: { id }
    });
+
+   // Public detail requests can hide products that are no longer available.
+   if (activeOnly && product && !product.isActive) {
+      return null;
+   }
 
    return serializeProduct(product);
 }

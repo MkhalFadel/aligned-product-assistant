@@ -23,10 +23,12 @@ function getRecommendedProducts(messages) {
 
          productIds.add(product.id);
          recommendedProducts.push({
+            id: product.id,
             name: product.name,
             imageUrl: product.imageUrl,
             category: product.category,
             price: serializeNumber(product.price),
+            isAvailable: product.isActive,
             reason: recommendation.reason
          });
       });
@@ -81,7 +83,8 @@ async function findConversationByToken(token) {
                            name: true,
                            imageUrl: true,
                            category: true,
-                           price: true
+                           price: true,
+                           isActive: true
                         }
                      }
                   }

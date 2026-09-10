@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { getCategoryLabel, getProductHighlights } from '../productAttributes'
 import styles from './productCard.module.css'
 
@@ -51,6 +52,8 @@ function ProductCard({ product }) {
                   ))}
                </dl>
             )}
+
+            <Link className={styles.detailsLink} to={`/products/${product.id}`}>View details</Link>
          </div>
       </article>
    )

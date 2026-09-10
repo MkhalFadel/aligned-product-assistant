@@ -34,20 +34,24 @@ async function request(path, options) {
 
 function normalizeRecommendedProduct(product) {
    if (!isRecord(product)
+      || typeof product.id !== 'string'
       || typeof product.name !== 'string'
       || typeof product.imageUrl !== 'string'
       || typeof product.category !== 'string'
       || typeof product.price !== 'number'
       || !Number.isFinite(product.price)
+      || typeof product.isAvailable !== 'boolean'
       || typeof product.reason !== 'string') {
       throw new Error('Report API returned an invalid recommended product.')
    }
 
    return {
+      id: product.id,
       name: product.name,
       imageUrl: product.imageUrl,
       category: product.category,
       price: product.price,
+      isAvailable: product.isAvailable,
       reason: product.reason,
    }
 }

@@ -5,11 +5,13 @@ import CustomerChat from './pages/CustomerChat/CustomerChat'
 import ConversationReport from './pages/ConversationReport/ConversationReport'
 import ProductCatalogue from './pages/ProductCatalogue/ProductCatalogue'
 import ProductDashboard from './pages/ProductDashboard/ProductDashboard'
+import ProductDetails from './pages/ProductDetails/ProductDetails'
 
 function App() {
    return (
       <Routes>
          <Route path="/" element={<ProductCatalogue />} />
+         <Route path="/products/:id" element={<ProductDetails />} />
          <Route path="/chat" element={<CustomerChat />} />
          <Route path="/report/:token" element={<ConversationReport />} />
          <Route path="/dashboard/products" element={<ProductDashboard />} />

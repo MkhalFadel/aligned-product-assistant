@@ -1,5 +1,16 @@
 const apiUrl = import.meta.env.VITE_API_URL?.replace(/\/$/, '')
 
+function isPlainObject(value) {
+   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function createApiError(message, status) {
+   const error = new Error(message)
+   error.status = status
+
+   return error
+}
+
 // Keeps product API requests in one place for the dashboard.
 async function request(path, options) {
    if (!apiUrl) {
@@ -16,7 +27,7 @@ async function request(path, options) {
    }
 
    if (!response.ok) {
-      throw new Error(data.message || 'Product request failed')
+      throw createApiError(data.message || 'Product request failed', response.status)
    }
 
    return data
@@ -28,6 +39,30 @@ function getResponseProduct(data) {
    }
 
    return data.product
+}
+
+function normalizePublicProduct(product) {
+   if (typeof product.id !== 'string'
+      || typeof product.name !== 'string'
+      || typeof product.description !== 'string'
+      || typeof product.price !== 'number'
+      || !Number.isFinite(product.price)
+      || typeof product.imageUrl !== 'string'
+      || typeof product.category !== 'string'
+      || !isPlainObject(product.attributes)
+      || product.isActive !== true) {
+      throw new Error('Product API returned an invalid public product.')
+   }
+
+   return {
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      imageUrl: product.imageUrl,
+      category: product.category,
+      attributes: product.attributes,
+   }
 }
 
 async function getProductList(path) {
@@ -46,6 +81,12 @@ export function getProducts() {
 
 export function getActiveProducts() {
    return getProductList('/api/products')
+}
+
+export async function getProductById(id) {
+   const data = await request(`/api/products/${encodeURIComponent(id)}?activeOnly=true`)
+
+   return normalizePublicProduct(getResponseProduct(data))
 }
 
 export async function createProduct(productData) {
