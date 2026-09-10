@@ -1,13 +1,14 @@
 const prisma = require("../src/lib/prisma");
 
 // Seeds the initial hardware catalogue without creating duplicate products.
+// Local product assets avoid depending on third-party image hotlinks at runtime.
 const products = [
    // Laptops cover budget, portable, business, gaming, and creative work.
    {
       name: "ASUS ROG Zephyrus G14",
       description: "A compact 14-inch gaming laptop with premium portability and modern AAA gaming performance.",
       price: 1699.99,
-      imageUrl: "https://placehold.co/1200x900/png?text=ASUS+ROG+Zephyrus+G14",
+      imageUrl: "/product-images/asus-rog-zephyrus-g14.jpg",
       category: "laptops",
       attributes: {
          brand: "ASUS",
@@ -27,7 +28,7 @@ const products = [
       name: "Apple MacBook Air 13-inch (M3)",
       description: "A light, quiet laptop with a 13.6-inch display, 16GB of unified memory, and all-day battery life for study and everyday work.",
       price: 1499.99,
-      imageUrl: "https://placehold.co/1200x900/png?text=Apple+MacBook+Air+M3",
+      imageUrl: "/product-images/apple-macbook-air-m3.jpg",
       category: "laptops",
       attributes: {
          brand: "Apple",
@@ -47,7 +48,7 @@ const products = [
       name: "Lenovo ThinkPad X1 Carbon Gen 12",
       description: "A lightweight business laptop with a durable 14-inch design, ample memory, and a comfortable keyboard for work on the move.",
       price: 1699.99,
-      imageUrl: "https://placehold.co/1200x900/png?text=Lenovo+ThinkPad+X1+Carbon+Gen+12",
+      imageUrl: "/product-images/lenovo-thinkpad-x1-carbon-gen12.png",
       category: "laptops",
       attributes: {
          brand: "Lenovo",
@@ -67,7 +68,7 @@ const products = [
       name: "Dell Inspiron 14 Plus 7440",
       description: "A 14-inch performance laptop with a sharp 2.2K display, modern Intel graphics, and enough memory for programming and multitasking.",
       price: 1099.99,
-      imageUrl: "https://placehold.co/1200x900/png?text=Dell+Inspiron+14+Plus+7440",
+      imageUrl: "/product-images/dell-inspiron-14-plus-7440.jpg",
       category: "laptops",
       attributes: {
          brand: "Dell",
@@ -87,7 +88,7 @@ const products = [
       name: "Acer Aspire 5 A515-58M",
       description: "An affordable 15.6-inch laptop with 16GB of memory and a 512GB SSD for web use, documents, and entry-level programming.",
       price: 649.99,
-      imageUrl: "https://placehold.co/1200x900/png?text=Acer+Aspire+5+A515-58M",
+      imageUrl: "/product-images/acer-aspire-5-a515-58m.jpg",
       category: "laptops",
       attributes: {
          brand: "Acer",
@@ -107,7 +108,7 @@ const products = [
       name: "Lenovo Legion 5i 16 Gen 9",
       description: "A 16-inch gaming laptop with an RTX 4060, a 165Hz display, and a capable processor for modern games and demanding projects.",
       price: 1499.99,
-      imageUrl: "https://placehold.co/1200x900/png?text=Lenovo+Legion+5i+16+Gen+9",
+      imageUrl: "/product-images/lenovo-legion-5i-gen9.png",
       category: "laptops",
       attributes: {
          brand: "Lenovo",
@@ -127,7 +128,7 @@ const products = [
       name: "HP Spectre x360 14",
       description: "A premium 2-in-1 laptop with a 14-inch OLED touchscreen, long battery life, and a light design for flexible work and creative tasks.",
       price: 1599.99,
-      imageUrl: "https://placehold.co/1200x900/png?text=HP+Spectre+x360+14",
+      imageUrl: "/product-images/hp-spectre-x360-14.jpg",
       category: "laptops",
       attributes: {
          brand: "HP",
@@ -147,7 +148,7 @@ const products = [
       name: "Dell XPS 16 9640",
       description: "A premium 16-inch laptop with dedicated RTX graphics, 32GB of memory, and a spacious display for creative applications and advanced coding.",
       price: 2299.99,
-      imageUrl: "https://placehold.co/1200x900/png?text=Dell+XPS+16+9640",
+      imageUrl: "/product-images/dell-xps-16-9640.png",
       category: "laptops",
       attributes: {
          brand: "Dell",
@@ -168,7 +169,7 @@ const products = [
       name: "Alienware Aurora R16",
       description: "A performance desktop PC designed for high-refresh-rate gaming and demanding creative workloads.",
       price: 2199.99,
-      imageUrl: "https://placehold.co/1200x900/png?text=Alienware+Aurora+R16",
+      imageUrl: "/product-images/alienware-aurora-r16.jpg",
       category: "desktop PCs",
       attributes: {
          brand: "Alienware",
@@ -185,7 +186,7 @@ const products = [
       name: "HP Victus 15L TG02",
       description: "An entry-level gaming desktop with an RTX 4060, 16GB of memory, and a compact tower for 1080p gaming and everyday work.",
       price: 899.99,
-      imageUrl: "https://placehold.co/1200x900/png?text=HP+Victus+15L+TG02",
+      imageUrl: "/product-images/hp-victus-15l-tg02.jpg",
       category: "desktop PCs",
       attributes: {
          brand: "HP",
@@ -202,7 +203,7 @@ const products = [
       name: "Lenovo Legion Tower 5i Gen 8",
       description: "A balanced gaming desktop with an RTX 4070, 32GB of memory, and fast storage for 1440p gaming and streaming.",
       price: 1599.99,
-      imageUrl: "https://placehold.co/1200x900/png?text=Lenovo+Legion+Tower+5i+Gen+8",
+      imageUrl: "/product-images/lenovo-legion-tower-5i-gen8.png",
       category: "desktop PCs",
       attributes: {
          brand: "Lenovo",
@@ -219,7 +220,7 @@ const products = [
       name: "Dell XPS Desktop 8960",
       description: "A productivity-focused desktop with a Core i7 processor, RTX 4060 Ti graphics, and 32GB of memory for editing and demanding office work.",
       price: 1799.99,
-      imageUrl: "https://placehold.co/1200x900/png?text=Dell+XPS+Desktop+8960",
+      imageUrl: "/product-images/dell-xps-desktop-8960.jpg",
       category: "desktop PCs",
       attributes: {
          brand: "Dell",
@@ -236,7 +237,7 @@ const products = [
       name: "Apple Mac mini (M2 Pro)",
       description: "A compact desktop with Apple silicon, 16GB of unified memory, and fast storage for programming, creative apps, and quiet office use.",
       price: 1299.99,
-      imageUrl: "https://placehold.co/1200x900/png?text=Apple+Mac+mini+M2+Pro",
+      imageUrl: "/product-images/apple-mac-mini-m2-pro.png",
       category: "desktop PCs",
       attributes: {
          brand: "Apple",
@@ -254,7 +255,7 @@ const products = [
       name: "LG UltraGear 27GS95QE-B",
       description: "A 27-inch OLED gaming monitor with deep contrast, rich color, and an ultra-fast refresh rate.",
       price: 799.99,
-      imageUrl: "https://placehold.co/1200x900/png?text=LG+UltraGear+27GS95QE-B",
+      imageUrl: "/product-images/lg-ultragear-27gs95qe-b.jpg",
       category: "monitors",
       attributes: {
          brand: "LG",
@@ -270,7 +271,7 @@ const products = [
       name: "Dell S2722QC",
       description: "A 27-inch 4K monitor with an IPS panel and USB-C connectivity for clear text, productivity, and general media use.",
       price: 329.99,
-      imageUrl: "https://placehold.co/1200x900/png?text=Dell+S2722QC",
+      imageUrl: "/product-images/dell-s2722qc.png",
       category: "monitors",
       attributes: {
          brand: "Dell",
@@ -286,7 +287,7 @@ const products = [
       name: "ASUS TUF Gaming VG27AQ3A",
       description: "A 27-inch 1440p gaming monitor with a Fast IPS panel, 180Hz refresh rate, and quick response time for competitive play.",
       price: 299.99,
-      imageUrl: "https://placehold.co/1200x900/png?text=ASUS+TUF+Gaming+VG27AQ3A",
+      imageUrl: "/product-images/asus-tuf-gaming-vg27aq3a.jpg",
       category: "monitors",
       attributes: {
          brand: "ASUS",
@@ -303,7 +304,7 @@ const products = [
       name: "Keychron Q1 Max",
       description: "A customizable 75 percent mechanical keyboard with a premium aluminum body and versatile wireless connectivity.",
       price: 219,
-      imageUrl: "https://placehold.co/1200x900/png?text=Keychron+Q1+Max",
+      imageUrl: "/product-images/keychron-q1-max.jpg",
       category: "keyboards",
       attributes: {
          brand: "Keychron",
@@ -318,7 +319,7 @@ const products = [
       name: "Logitech G PRO X TKL LIGHTSPEED",
       description: "A tenkeyless gaming mechanical keyboard with wireless connectivity, tactile switches, and RGB lighting for competitive play.",
       price: 199.99,
-      imageUrl: "https://placehold.co/1200x900/png?text=Logitech+G+PRO+X+TKL+LIGHTSPEED",
+      imageUrl: "/product-images/logitech-g-pro-x-tkl-lightspeed.png",
       category: "keyboards",
       attributes: {
          brand: "Logitech",
@@ -334,7 +335,7 @@ const products = [
       name: "Xbox Wireless Controller",
       description: "An ergonomic controller for console, PC, and mobile play with textured grips and broad compatibility.",
       price: 64.99,
-      imageUrl: "https://placehold.co/1200x900/png?text=Xbox+Wireless+Controller",
+      imageUrl: "/product-images/xbox-wireless-controller.png",
       category: "controllers",
       attributes: {
          brand: "Microsoft",
@@ -349,7 +350,7 @@ const products = [
       name: "Sony DualSense Wireless Controller",
       description: "A wireless controller for PlayStation 5 and compatible PC or mobile games, with haptic feedback and adaptive triggers in supported titles.",
       price: 74.99,
-      imageUrl: "https://placehold.co/1200x900/png?text=Sony+DualSense+Wireless+Controller",
+      imageUrl: "/product-images/sony-dualsense-wireless-controller.jpeg",
       category: "controllers",
       attributes: {
          brand: "Sony",

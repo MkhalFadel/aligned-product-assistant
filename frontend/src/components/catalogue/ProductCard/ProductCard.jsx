@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import productFallback from '../../../assets/productFallback.svg'
 import { getCategoryLabel, getProductHighlights } from '../productAttributes'
 import styles from './productCard.module.css'
 
@@ -23,9 +24,7 @@ function ProductCard({ product }) {
       <article className={styles.card}>
          <div className={styles.imageWrap}>
             {hasImageError ? (
-               <div className={styles.imageFallback} role="img" aria-label={`${product.name} image unavailable`}>
-                  Image unavailable
-               </div>
+               <img className={styles.imageFallback} src={productFallback} alt={`${product.name} image unavailable`} />
             ) : (
                <img
                   className={styles.image}

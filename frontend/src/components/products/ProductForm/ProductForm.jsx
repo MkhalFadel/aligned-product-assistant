@@ -156,7 +156,7 @@ function ProductForm({ mode, product, isSaving, error, onCancel, onSubmit }) {
                </select>
             </label>
             <label>
-               Image URL <span className={styles.optional}>(optional)</span>
+               Product image URL <span className={styles.optional}>(optional)</span>
                <input name="imageUrl" type="url" value={formData.imageUrl} onChange={handleChange} disabled={isSaving} placeholder="https://example.com/product.jpg" />
             </label>
          </div>

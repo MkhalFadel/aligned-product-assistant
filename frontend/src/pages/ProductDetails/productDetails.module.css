@@ -153,16 +153,13 @@
 }
 
 .productImage {
-   object-fit: cover;
+   padding: 24px;
+   object-fit: contain;
 }
 
 .imageFallback {
-   display: grid;
-   place-items: center;
-   color: #64748b;
-   background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-   font-size: 14px;
-   font-weight: 700;
+   padding: 32px;
+   object-fit: contain;
 }
 
 .productContent {

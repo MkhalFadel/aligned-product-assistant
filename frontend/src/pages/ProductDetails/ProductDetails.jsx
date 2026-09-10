@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import productFallback from '../../assets/productFallback.svg'
 import { getCategoryLabel, getProductSpecifications } from '../../components/catalogue/productAttributes'
 import { getProductById } from '../../services/productApi'
 import styles from './productDetails.module.css'
@@ -106,9 +107,7 @@ function ProductDetails() {
                   <section className={styles.productHero} aria-labelledby="product-title">
                      <div className={styles.imagePanel}>
                         {hasImageError ? (
-                           <div className={styles.imageFallback} role="img" aria-label={`${product.name} image unavailable`}>
-                              Image unavailable
-                           </div>
+                           <img className={styles.imageFallback} src={productFallback} alt={`${product.name} image unavailable`} />
                         ) : (
                            <img
                               className={styles.productImage}

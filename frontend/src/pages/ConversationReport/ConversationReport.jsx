@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import productFallback from '../../assets/productFallback.svg'
 import FeedbackMessage from '../../components/common/FeedbackMessage/FeedbackMessage'
 import { getReport, submitFeedback } from '../../services/reportApi'
 import styles from './conversationReport.module.css'
@@ -54,7 +55,7 @@ function RecommendedProductImage({ product }) {
    const [hasImageError, setHasImageError] = useState(!product.imageUrl)
 
    if (hasImageError) {
-      return <div className={styles.imageFallback} role="img" aria-label={`${product.name} image unavailable`}>Image unavailable</div>
+      return <img className={styles.imageFallback} src={productFallback} alt={`${product.name} image unavailable`} />
    }
 
    return (

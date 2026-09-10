@@ -30,16 +30,13 @@
 }
 
 .image {
-   object-fit: cover;
+   padding: 12px;
+   object-fit: contain;
 }
 
 .imageFallback {
-   display: grid;
-   place-items: center;
-   color: #64748b;
-   background: linear-gradient(135deg, #f8fafc, #e2e8f0);
-   font-size: 13px;
-   font-weight: 700;
+   padding: 18px;
+   object-fit: contain;
 }
 
 .content {
