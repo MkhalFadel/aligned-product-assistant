@@ -35,7 +35,7 @@ function getSendErrorMessage(error, hasCreatedConversation) {
       return 'Unable to start a conversation. Please try again.'
    }
 
-   return 'The assistant could not respond. You can try again.'
+   return 'The assistant could not respond. Please try again.'
 }
 
 function getEndErrorMessage(error) {
@@ -144,8 +144,10 @@ function CustomerChat() {
             return [...reconciledMessages, result.assistantMessage]
          })
       } catch (error) {
-         setMessages((current) => current.filter((message) => message.id !== temporaryMessageId))
-         setInput(content)
+         if (!error.userMessageStored) {
+            setMessages((current) => current.filter((message) => message.id !== temporaryMessageId))
+            setInput(content)
+         }
 
          if (error.status === 409) {
             setIsEnded(true)
@@ -221,8 +223,9 @@ function CustomerChat() {
             <div className={styles.navigation}>
                <Link className={styles.brand} to="/">Aligned Tech</Link>
                <nav className={styles.navLinks} aria-label="Customer navigation">
-                  <Link to="/">Browse products</Link>
-                  <span>Product assistant</span>
+                  <Link to="/">Products</Link>
+                  <Link to="/chat">Ask Assistant</Link>
+                  <Link to="/dashboard/products">Reviewer Dashboard</Link>
                </nav>
             </div>
          </header>

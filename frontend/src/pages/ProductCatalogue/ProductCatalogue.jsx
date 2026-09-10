@@ -69,6 +69,7 @@ function ProductCatalogue() {
                <nav className={styles.navLinks} aria-label="Customer navigation">
                   <a href="#products">Products</a>
                   <Link to="/chat">Ask the Assistant</Link>
+                  <Link to="/dashboard/products">Reviewer Dashboard</Link>
                </nav>
             </div>
          </header>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import DashboardNav from '../../components/dashboard/DashboardNav/DashboardNav'
 import ConversationStatus from '../../components/conversations/ConversationStatus/ConversationStatus'
 import ScoreBadge from '../../components/conversations/ScoreBadge/ScoreBadge'
 import { getConversations } from '../../services/conversationApi'
@@ -75,6 +76,7 @@ function ConversationDashboard() {
    return (
       <main className={styles.page}>
          <div className={styles.content}>
+            <DashboardNav />
             <header className={styles.header}>
                <p className={styles.eyebrow}>Conversation review</p>
                <h1>Conversations</h1>

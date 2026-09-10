@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import DashboardNav from '../../components/dashboard/DashboardNav/DashboardNav'
 import ConversationMessage from '../../components/conversations/ConversationMessage/ConversationMessage'
 import ConversationStatus from '../../components/conversations/ConversationStatus/ConversationStatus'
 import ScoreBadge from '../../components/conversations/ScoreBadge/ScoreBadge'
@@ -85,6 +86,7 @@ function ConversationDetails() {
    return (
       <main className={styles.page}>
          <div className={styles.content}>
+            <DashboardNav />
             <Link className={styles.backLink} to="/dashboard/conversations">Back to conversations</Link>
 
             {isLoading && <section className={styles.stateCard}><p>Loading conversation...</p></section>}
