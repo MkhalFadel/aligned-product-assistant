@@ -7,6 +7,13 @@ import { createConversation, endConversation, sendMessage } from '../../services
 import { detectLanguage } from '../../utils/detectLanguage'
 import styles from './customerChat.module.css'
 
+const maxMessageLength = 1000
+
+function isConversationLimitError(error) {
+   return error.status === 429
+      && error.message === 'This conversation has reached its message limit. Please start a new conversation.'
+}
+
 function getSendErrorMessage(error, hasCreatedConversation) {
    if (error.message === 'VITE_API_URL is not configured.') {
       return 'The assistant is not configured. Please try again later.'
@@ -14,6 +21,14 @@ function getSendErrorMessage(error, hasCreatedConversation) {
 
    if (error.status === 409) {
       return 'This conversation has ended. Start a new conversation to continue.'
+   }
+
+   if (isConversationLimitError(error)) {
+      return 'This conversation has reached its message limit. Start a new conversation to continue.'
+   }
+
+   if (error.status === 429) {
+      return 'Too many requests. Please try again later.'
    }
 
    if (!hasCreatedConversation) {
@@ -42,6 +57,7 @@ function CustomerChat() {
    const [reportToken, setReportToken] = useState('')
    const [errorMessage, setErrorMessage] = useState('')
    const [isEndConfirmationOpen, setIsEndConfirmationOpen] = useState(false)
+   const [hasReachedMessageLimit, setHasReachedMessageLimit] = useState(false)
    const isSendingRef = useRef(false)
    const isEndingRef = useRef(false)
    const endButtonRef = useRef(null)
@@ -57,7 +73,13 @@ function CustomerChat() {
    async function handleSend() {
       const content = input.trim()
 
-      if (!content || isEnded || isSendingRef.current) {
+      if (!content || isEnded || hasReachedMessageLimit || isSendingRef.current) {
+         return
+      }
+
+      if (content.length > maxMessageLength) {
+         setErrorMessage(`Message must be ${maxMessageLength} characters or fewer.`)
+
          return
       }
 
@@ -108,6 +130,10 @@ function CustomerChat() {
 
          if (error.status === 409) {
             setIsEnded(true)
+         }
+
+         if (isConversationLimitError(error)) {
+            setHasReachedMessageLimit(true)
          }
 
          setErrorMessage(getSendErrorMessage(error, hasCreatedConversation))
@@ -167,6 +193,7 @@ function CustomerChat() {
       setReportToken('')
       setErrorMessage('')
       setIsEndConfirmationOpen(false)
+      setHasReachedMessageLimit(false)
    }
 
    return (
@@ -235,11 +262,20 @@ function CustomerChat() {
                         <button type="button" className={styles.newConversationButton} onClick={startNewConversation}>Start new conversation</button>
                      </div>
                   </section>
+               ) : hasReachedMessageLimit ? (
+                  <section className={styles.endedState} aria-labelledby="limit-heading">
+                     <h2 id="limit-heading">Message limit reached</h2>
+                     <p>This conversation has reached its message limit. You can start a new product search when you’re ready.</p>
+                     <div className={styles.endedActions}>
+                        <button type="button" className={styles.newConversationButton} onClick={startNewConversation}>Start new conversation</button>
+                     </div>
+                  </section>
                ) : (
                   <MessageInput
                      value={input}
                      isDisabled={isEnding}
                      isSending={isSending}
+                     maxMessageLength={maxMessageLength}
                      onChange={setInput}
                      onSend={handleSend}
                   />

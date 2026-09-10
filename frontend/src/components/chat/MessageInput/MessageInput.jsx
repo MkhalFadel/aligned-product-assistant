@@ -1,6 +1,6 @@
 import styles from './messageInput.module.css'
 
-function MessageInput({ value, isDisabled, isSending, onChange, onSend }) {
+function MessageInput({ value, isDisabled, isSending, maxMessageLength, onChange, onSend }) {
    function handleSubmit(event) {
       event.preventDefault()
       onSend()
@@ -23,6 +23,7 @@ function MessageInput({ value, isDisabled, isSending, onChange, onSend }) {
                onChange={(event) => onChange(event.target.value)}
                onKeyDown={handleKeyDown}
                disabled={isDisabled || isSending}
+               maxLength={maxMessageLength}
                placeholder="Tell the assistant what you need..."
                rows="2"
             />
@@ -30,7 +31,7 @@ function MessageInput({ value, isDisabled, isSending, onChange, onSend }) {
                {isSending ? 'Sending...' : 'Send'}
             </button>
          </div>
-         <p className={styles.hint}>Press Enter to send. Use Shift+Enter for a new line.</p>
+         <p className={styles.hint}>Press Enter to send. Use Shift+Enter for a new line. {value.length} / {maxMessageLength} characters.</p>
       </form>
    )
 }

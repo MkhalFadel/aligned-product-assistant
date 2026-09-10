@@ -3,6 +3,7 @@ const aiService = require("./aiService");
 const scoringService = require("./scoringService");
 const { buildCatalogueContext } = require("./catalogueContextService");
 const { serializeMessage, updateDetectedLanguage } = require("./conversationService");
+const { maxMessagesPerConversation } = require("../config/limits");
 
 function createAssistantError(message, code) {
    const error = new Error(message);
@@ -79,6 +80,18 @@ async function addUserMessageAndRespond(id, messageData) {
 
    if (conversation.status === "ENDED") {
       return { hasEnded: true };
+   }
+
+   const userMessageCount = await prisma.message.count({
+      where: {
+         conversationId: id,
+         role: "USER"
+      }
+   });
+
+   // The cap is checked before storing a USER message or calling the provider.
+   if (userMessageCount >= maxMessagesPerConversation) {
+      return { hasReachedMessageLimit: true };
    }
 
    const userMessage = await prisma.$transaction(async (transaction) => {

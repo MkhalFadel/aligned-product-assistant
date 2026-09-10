@@ -1,6 +1,7 @@
 const allowedMessageFields = ["role", "content", "language"];
 const allowedRoles = ["USER"];
 const allowedLanguages = ["ENGLISH", "ARABIZI", "ARABIC", "MIXED"];
+const { maxMessageLength } = require("../config/limits");
 
 function isPlainObject(value) {
    if (value === null || typeof value !== "object" || Array.isArray(value)) {
@@ -48,6 +49,8 @@ function validateAddMessage(message) {
 
    if (typeof message.content !== "string" || message.content.trim() === "") {
       errors.push("content must be a non-empty string");
+   } else if (message.content.length > maxMessageLength) {
+      errors.push(`Message must be ${maxMessageLength} characters or fewer.`);
    }
 
    if (!allowedRoles.includes(message.role)) {

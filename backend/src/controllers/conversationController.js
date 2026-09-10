@@ -51,6 +51,12 @@ async function addMessage(req, res, next) {
          return res.status(409).json({ message: "Conversation has already ended" });
       }
 
+      if (result.hasReachedMessageLimit) {
+         return res.status(429).json({
+            message: "This conversation has reached its message limit. Please start a new conversation."
+         });
+      }
+
       return res.status(201).json({
          userMessage: result.userMessage,
          assistantMessage: result.assistantMessage
