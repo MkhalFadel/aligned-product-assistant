@@ -3,11 +3,36 @@ import { Link, useLocation } from 'react-router-dom'
 import ChatMessage from '../../components/chat/ChatMessage/ChatMessage'
 import MessageInput from '../../components/chat/MessageInput/MessageInput'
 import ConfirmModal from '../../components/common/ConfirmModal/ConfirmModal'
-import { createConversation, endConversation, sendMessage } from '../../services/chatApi'
+import { createConversation, endConversation, getConversationById, sendMessage } from '../../services/chatApi'
 import { detectLanguage } from '../../utils/detectLanguage'
 import styles from './customerChat.module.css'
 
 const maxMessageLength = 1000
+const activeConversationStorageKey = 'alignedActiveConversationId'
+
+function getStoredConversationId() {
+   try {
+      return window.localStorage.getItem(activeConversationStorageKey)
+   } catch {
+      return null
+   }
+}
+
+function storeConversationId(conversationId) {
+   try {
+      window.localStorage.setItem(activeConversationStorageKey, conversationId)
+   } catch {
+      // Chat remains usable when local storage is unavailable.
+   }
+}
+
+function clearStoredConversationId() {
+   try {
+      window.localStorage.removeItem(activeConversationStorageKey)
+   } catch {
+      // Chat remains usable when local storage is unavailable.
+   }
+}
 
 function isConversationLimitError(error) {
    return error.status === 429
@@ -59,6 +84,7 @@ function CustomerChat() {
    const [errorMessage, setErrorMessage] = useState('')
    const [isEndConfirmationOpen, setIsEndConfirmationOpen] = useState(false)
    const [hasReachedMessageLimit, setHasReachedMessageLimit] = useState(false)
+   const [isRestoring, setIsRestoring] = useState(true)
    const isSendingRef = useRef(false)
    const isEndingRef = useRef(false)
    const endButtonRef = useRef(null)
@@ -66,9 +92,53 @@ function CustomerChat() {
    const appliedPrefillKeyRef = useRef('')
 
    useEffect(() => {
+      let isCurrent = true
+
+      async function restoreConversation() {
+         const storedConversationId = getStoredConversationId()
+
+         if (!storedConversationId) {
+            if (isCurrent) {
+               setIsRestoring(false)
+            }
+
+            return
+         }
+
+         try {
+            const conversation = await getConversationById(storedConversationId)
+
+            if (conversation.status !== 'ACTIVE') {
+               clearStoredConversationId()
+
+               return
+            }
+
+            if (isCurrent) {
+               setConversationId(conversation.id)
+               setMessages(conversation.messages)
+            }
+         } catch {
+            clearStoredConversationId()
+         } finally {
+            if (isCurrent) {
+               setIsRestoring(false)
+            }
+         }
+      }
+
+      restoreConversation()
+
+      return () => {
+         isCurrent = false
+      }
+   }, [])
+
+   useEffect(() => {
       const { productId, productName } = location.state || {}
 
-      if (appliedPrefillKeyRef.current === location.key
+      if (isRestoring
+         || appliedPrefillKeyRef.current === location.key
          || typeof productId !== 'string'
          || typeof productName !== 'string'
          || !productName.trim()
@@ -80,7 +150,7 @@ function CustomerChat() {
       // Prefills the message from a product page without starting a conversation.
       setInput(`Tell me more about ${productName.trim()} and whether it fits my needs.`)
       appliedPrefillKeyRef.current = location.key
-   }, [conversationId, location.key, location.state, messages.length])
+   }, [conversationId, isRestoring, location.key, location.state, messages.length])
 
    useEffect(() => {
       if (messages.length > 0) {
@@ -92,7 +162,7 @@ function CustomerChat() {
    async function handleSend() {
       const content = input.trim()
 
-      if (!content || isEnded || hasReachedMessageLimit || isSendingRef.current) {
+      if (!content || isRestoring || isEnded || hasReachedMessageLimit || isSendingRef.current) {
          return
       }
 
@@ -128,6 +198,7 @@ function CustomerChat() {
             activeConversationId = conversation.id
             hasCreatedConversation = true
             setConversationId(activeConversationId)
+            storeConversationId(activeConversationId)
          }
 
          const result = await sendMessage(activeConversationId, {
@@ -151,6 +222,7 @@ function CustomerChat() {
 
          if (error.status === 409) {
             setIsEnded(true)
+            clearStoredConversationId()
          }
 
          if (isConversationLimitError(error)) {
@@ -192,6 +264,7 @@ function CustomerChat() {
          setIsEnded(true)
          setReportToken(conversation.reportToken)
          setIsEndConfirmationOpen(false)
+         clearStoredConversationId()
       } catch (error) {
          setIsEndConfirmationOpen(false)
          setErrorMessage(getEndErrorMessage(error))
@@ -215,6 +288,7 @@ function CustomerChat() {
       setErrorMessage('')
       setIsEndConfirmationOpen(false)
       setHasReachedMessageLimit(false)
+      clearStoredConversationId()
    }
 
    return (
@@ -251,56 +325,64 @@ function CustomerChat() {
             </header>
 
             <section className={styles.chatCard} aria-label="Product assistant conversation">
-               {errorMessage && <p className={styles.errorMessage} role="alert">{errorMessage}</p>}
-
-               {messages.length === 0 && !isSending && !isEnded && (
-                  <div className={styles.welcomeState}>
-                     <h2>Tell me what you’re looking for</h2>
-                     <p>Share your budget, priorities, and the kind of work or play you have in mind.</p>
-                     <ul>
-                        <li>I need a laptop for university under $1000</li>
-                        <li>bade controller lal PC w ykoun wireless</li>
-                        <li>أحتاج شاشة مناسبة للعمل والألعاب</li>
-                     </ul>
-                  </div>
-               )}
-
-               {messages.length > 0 && (
-                  <section className={styles.messages} role="log" aria-live="polite" aria-label="Conversation messages">
-                     {messages.map((message) => <ChatMessage key={message.id} message={message} />)}
-                     {isSending && (
-                        <p className={styles.typingIndicator} role="status" aria-live="polite">Assistant is thinking...</p>
-                     )}
-                     <div ref={messageEndRef} />
-                  </section>
-               )}
-
-               {isEnded ? (
-                  <section className={styles.endedState} aria-labelledby="ended-heading">
-                     <h2 id="ended-heading">Conversation ended</h2>
-                     <p>You can review this conversation later or start another product search.</p>
-                     <div className={styles.endedActions}>
-                        {reportToken && <Link className={styles.reportLink} to={`/report/${reportToken}`}>View conversation report</Link>}
-                        <button type="button" className={styles.newConversationButton} onClick={startNewConversation}>Start new conversation</button>
-                     </div>
-                  </section>
-               ) : hasReachedMessageLimit ? (
-                  <section className={styles.endedState} aria-labelledby="limit-heading">
-                     <h2 id="limit-heading">Message limit reached</h2>
-                     <p>This conversation has reached its message limit. You can start a new product search when you’re ready.</p>
-                     <div className={styles.endedActions}>
-                        <button type="button" className={styles.newConversationButton} onClick={startNewConversation}>Start new conversation</button>
-                     </div>
+               {isRestoring ? (
+                  <section className={styles.restoreState} role="status">
+                     <p>Restoring your conversation...</p>
                   </section>
                ) : (
-                  <MessageInput
-                     value={input}
-                     isDisabled={isEnding}
-                     isSending={isSending}
-                     maxMessageLength={maxMessageLength}
-                     onChange={setInput}
-                     onSend={handleSend}
-                  />
+                  <>
+                     {errorMessage && <p className={styles.errorMessage} role="alert">{errorMessage}</p>}
+
+                     {messages.length === 0 && !isSending && !isEnded && (
+                        <div className={styles.welcomeState}>
+                           <h2>Tell me what you’re looking for</h2>
+                           <p>Share your budget, priorities, and the kind of work or play you have in mind.</p>
+                           <ul>
+                              <li>I need a laptop for university under $1000</li>
+                              <li>bade controller lal PC w ykoun wireless</li>
+                              <li>أحتاج شاشة مناسبة للعمل والألعاب</li>
+                           </ul>
+                        </div>
+                     )}
+
+                     {messages.length > 0 && (
+                        <section className={styles.messages} role="log" aria-live="polite" aria-label="Conversation messages">
+                           {messages.map((message) => <ChatMessage key={message.id} message={message} />)}
+                           {isSending && (
+                              <p className={styles.typingIndicator} role="status" aria-live="polite">Assistant is thinking...</p>
+                           )}
+                           <div ref={messageEndRef} />
+                        </section>
+                     )}
+
+                     {isEnded ? (
+                        <section className={styles.endedState} aria-labelledby="ended-heading">
+                           <h2 id="ended-heading">Conversation ended</h2>
+                           <p>You can review this conversation later or start another product search.</p>
+                           <div className={styles.endedActions}>
+                              {reportToken && <Link className={styles.reportLink} to={`/report/${reportToken}`}>View conversation report</Link>}
+                              <button type="button" className={styles.newConversationButton} onClick={startNewConversation}>Start new conversation</button>
+                           </div>
+                        </section>
+                     ) : hasReachedMessageLimit ? (
+                        <section className={styles.endedState} aria-labelledby="limit-heading">
+                           <h2 id="limit-heading">Message limit reached</h2>
+                           <p>This conversation has reached its message limit. You can start a new product search when you’re ready.</p>
+                           <div className={styles.endedActions}>
+                              <button type="button" className={styles.newConversationButton} onClick={startNewConversation}>Start new conversation</button>
+                           </div>
+                        </section>
+                     ) : (
+                        <MessageInput
+                           value={input}
+                           isDisabled={isEnding}
+                           isSending={isSending}
+                           maxMessageLength={maxMessageLength}
+                           onChange={setInput}
+                           onSend={handleSend}
+                        />
+                     )}
+                  </>
                )}
             </section>
          </div>

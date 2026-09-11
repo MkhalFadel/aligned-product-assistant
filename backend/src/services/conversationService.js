@@ -98,12 +98,9 @@ function getFallbackSummary(messages, detectedLanguage) {
       return null;
    }
 
-   const prefix = detectedLanguage === "MIXED"
-      ? "Customer is looking for:"
-      : "Customer request:";
    const condensedContent = content.length > 300 ? `${content.slice(0, 297)}...` : content;
 
-   return `${prefix} ${condensedContent}`;
+   return condensedContent;
 }
 
 async function createConversationSummary(messages, detectedLanguage) {

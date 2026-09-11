@@ -111,6 +111,19 @@ function normalizeConversation(conversation) {
    }
 }
 
+function normalizeRestoredConversation(conversation) {
+   const normalizedConversation = normalizeConversation(conversation)
+
+   if (!Array.isArray(conversation.messages)) {
+      throw new Error('Chat API returned an invalid conversation history.')
+   }
+
+   return {
+      ...normalizedConversation,
+      messages: conversation.messages.map(normalizeMessage),
+   }
+}
+
 export async function createConversation() {
    const data = await request('/api/conversations', { method: 'POST' })
 
@@ -119,6 +132,16 @@ export async function createConversation() {
    }
 
    return normalizeConversation(data.conversation)
+}
+
+export async function getConversationById(conversationId) {
+   const data = await request(`/api/conversations/${conversationId}`)
+
+   if (!isRecord(data)) {
+      throw new Error('Chat API returned an invalid conversation response.')
+   }
+
+   return normalizeRestoredConversation(data.conversation)
 }
 
 export async function sendMessage(conversationId, message) {

@@ -114,7 +114,24 @@ async function addUserMessageAndRespond(id, messageData) {
       prisma.message.findMany({
          where: { conversationId: id },
          orderBy: { createdAt: "desc" },
-         take: 12
+         take: 12,
+         include: {
+            recommendations: {
+               include: {
+                  product: {
+                     select: {
+                        id: true,
+                        name: true,
+                        description: true,
+                        price: true,
+                        category: true,
+                        attributes: true,
+                        isActive: true
+                     }
+                  }
+               }
+            }
+         }
       }),
       prisma.product.findMany({
          where: { isActive: true },

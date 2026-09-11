@@ -127,20 +127,66 @@ function buildInstructions(language) {
       "Keep the response concise and recommend no more than three products in one response.",
       "If no catalogue product fits, clearly say the catalogue does not contain a suitable option and return an empty recommendedProducts array.",
       "Use only catalogue data when explaining recommendations or comparisons.",
+      "Treat follow-ups such as 'which one is best', 'which of these', 'between those', 'what about battery life', and 'which would you choose' as referring to recent recommendations when they follow a recommendation.",
+      "For that kind of follow-up, compare or rank the recent recommendation context and keep both the answer and recommendedProducts limited to those products.",
+      "Only introduce another product when the customer explicitly asks for alternatives, the earlier recommendations do not meet a newly stated requirement, or another product is genuinely necessary. Briefly explain why the earlier products are insufficient when introducing one.",
       getLanguageInstruction(language)
    ].join("\n");
 }
 
+function getRecommendedProducts(message) {
+   return (message.recommendations || [])
+      .filter((recommendation) => recommendation.product?.isActive)
+      .map((recommendation) => ({
+         productId: recommendation.productId,
+         name: recommendation.product.name,
+         description: recommendation.product.description,
+         price: Number(recommendation.product.price),
+         category: recommendation.product.category,
+         attributes: recommendation.product.attributes
+      }));
+}
+
+function getPreviousRecommendationContext(message) {
+   const recommendedProducts = getRecommendedProducts(message);
+
+   if (recommendedProducts.length === 0) {
+      return message.content;
+   }
+
+   return `${message.content}\n\nProducts recommended in this earlier assistant response: ${JSON.stringify(recommendedProducts)}`;
+}
+
+function getRecentRecommendationContext(history) {
+   const previousAssistantMessage = [...history]
+      .reverse()
+      .find((message) => message.role === "ASSISTANT" && getRecommendedProducts(message).length > 0);
+
+   if (!previousAssistantMessage) {
+      return null;
+   }
+
+   return getRecommendedProducts(previousAssistantMessage);
+}
+
 function buildModelContents(history, catalogue) {
+   const recentRecommendations = getRecentRecommendationContext(history);
    const contents = history.map((message) => ({
       role: message.role === "USER" ? "user" : "model",
-      parts: [{ text: message.content }]
+      parts: [{ text: getPreviousRecommendationContext(message) }]
    }));
    const catalogueContext = `Use this active catalogue as the only product source: ${JSON.stringify(catalogue)}`;
    const latestMessage = contents[contents.length - 1];
 
    if (latestMessage?.role === "user") {
-      latestMessage.parts[0].text = `${latestMessage.parts[0].text}\n\n${catalogueContext}`;
+      const recentRecommendationContext = recentRecommendations
+         ? `Recent recommendations to compare for a contextual follow-up: ${JSON.stringify(recentRecommendations)}`
+         : null;
+      latestMessage.parts[0].text = [
+         latestMessage.parts[0].text,
+         recentRecommendationContext,
+         catalogueContext
+      ].filter(Boolean).join("\n\n");
    } else {
       contents.push({
          role: "user",
@@ -473,7 +519,9 @@ function buildSummaryInstructions(language) {
       "Combine repeated requirements and remove conversational filler while preserving explicitly stated budget, product category, intended use, portability, compatibility, and requested features.",
       "Do not add requirements, product facts, prices, specifications, or compatibility details the customer did not mention.",
       "Write a direct summary of the requirements rather than referring to the person as the customer.",
-      "Keep the result customer-friendly and concise, ideally one to three sentences.",
+      "Do not prefix the summary with 'Customer request:' or a similar label.",
+      "For a single-message request, paraphrase the request naturally instead of returning it verbatim whenever possible.",
+      "Keep the result customer-friendly and concise, ideally one sentence and never more than three sentences.",
       languageInstructions[language] || languageInstructions.MIXED
    ].join("\n");
 }

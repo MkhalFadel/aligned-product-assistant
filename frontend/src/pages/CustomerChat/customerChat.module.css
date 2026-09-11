@@ -143,6 +143,19 @@
    min-height: 330px;
 }
 
+.restoreState {
+   display: grid;
+   min-height: 330px;
+   place-items: center;
+   padding: 46px 32px;
+   color: #64748b;
+   font-size: 14px;
+}
+
+.restoreState p {
+   margin: 0;
+}
+
 .welcomeState h2,
 .endedState h2 {
    margin: 0;
