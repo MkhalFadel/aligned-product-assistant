@@ -48,6 +48,12 @@ Recommended product IDs are validated against active catalogue records before pe
 
 Every message stores its language classification. Arabizi instructions deliberately permit natural English technical terms such as `laptop`, `RAM`, `gaming`, and `budget`, while avoiding Arabic script unless the conversation is genuinely mixed.
 
+### Owner-configurable assistant behavior
+
+Business owners can update the assistant name and business-facing behavior instructions from `/dashboard/settings`, so a client can adjust the assistant’s personality and tone without requiring a developer. Those values are stored in `AssistantSettings` and loaded before each Gemini generation. The same settings record supplies the high-risk scoring threshold used when an assistant reply is scored.
+
+These owner settings apply to business-facing behavior, not to safety or grounding guarantees. Developer-controlled safeguards remain enforced in code and cannot be overridden by owner instructions, including catalogue-only grounding, prohibitions on invented products, prices, or specifications, language matching, structured output, recommendation validation, scoring logic, retry and timeout behavior, and rate limits. Settings changes are persisted in the database and take effect dynamically without a redeploy.
+
 ## Response quality scoring
 
 Assistant replies are scored with a hybrid approach.
@@ -100,8 +106,7 @@ The reviewer dashboard provides:
 - full conversation detail with USER and ASSISTANT messages displayed distinctly;
 - per-assistant-message accuracy, hallucination-risk, flagged state, and scoring mode;
 - customer request summaries and submitted feedback;
-- assistant name and behavior-instruction settings that owners can update without developer involvement;
-- an owner-configurable high-risk scoring threshold, while grounding and safety rules remain enforced in code.
+- `/dashboard/settings`, available from the shared dashboard navigation, where owners can configure the assistant name, behavior instructions, and high-risk scoring threshold.
 
 > This assessment intentionally exposes the dashboard without authentication so reviewers can inspect product management and conversation monitoring. In production, dashboard routes and APIs would be protected by authenticated admin accounts, role-based authorization, and tenant isolation.
 
@@ -135,7 +140,7 @@ Gemini requests have a bounded 20-second timeout. Retries are bounded: retryable
 - **Message** stores USER and ASSISTANT messages, language, quality scores, flag state, and scoring mode.
 - **Recommendation** belongs to an assistant message and references a product.
 - **Feedback** belongs to one conversation and stores a rating with an optional comment.
-- **AssistantSettings** stores the owner-configurable assistant name, behavior instructions, and high-risk threshold.
+- **AssistantSettings** stores the owner-configurable assistant name, business-facing behavior instructions, and high-risk threshold.
 
 A conversation has many messages, an assistant message can have many recommendations, each recommendation references one product, and a conversation can have one feedback record.
 
