@@ -89,7 +89,11 @@ function CustomerChat() {
    const isEndingRef = useRef(false)
    const endButtonRef = useRef(null)
    const messageEndRef = useRef(null)
+   const reportActionRef = useRef(null)
+   const errorMessageRef = useRef(null)
    const appliedPrefillKeyRef = useRef('')
+   const previousErrorMessageRef = useRef('')
+   const hasScrolledToReportRef = useRef(false)
 
    useEffect(() => {
       let isCurrent = true
@@ -157,6 +161,34 @@ function CustomerChat() {
          messageEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
       }
    }, [isSending, messages])
+
+   useEffect(() => {
+      if (!errorMessage) {
+         previousErrorMessageRef.current = ''
+         return
+      }
+
+      if (previousErrorMessageRef.current === errorMessage) {
+         return
+      }
+
+      errorMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      previousErrorMessageRef.current = errorMessage
+   }, [errorMessage])
+
+   useEffect(() => {
+      if (!isEnded) {
+         hasScrolledToReportRef.current = false
+         return
+      }
+
+      if (!reportToken || hasScrolledToReportRef.current) {
+         return
+      }
+
+      reportActionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      hasScrolledToReportRef.current = true
+   }, [isEnded, reportToken])
 
    // Renders a temporary user message before creating a first conversation or sending a follow-up.
    async function handleSend() {
@@ -331,7 +363,7 @@ function CustomerChat() {
                   </section>
                ) : (
                   <>
-                     {errorMessage && <p className={styles.errorMessage} role="alert">{errorMessage}</p>}
+                     {errorMessage && <p ref={errorMessageRef} className={styles.errorMessage} role="alert">{errorMessage}</p>}
 
                      {messages.length === 0 && !isSending && !isEnded && (
                         <div className={styles.welcomeState}>
@@ -359,7 +391,7 @@ function CustomerChat() {
                         <section className={styles.endedState} aria-labelledby="ended-heading">
                            <h2 id="ended-heading">Conversation ended</h2>
                            <p>You can review this conversation later or start another product search.</p>
-                           <div className={styles.endedActions}>
+                           <div ref={reportActionRef} className={styles.endedActions}>
                               {reportToken && <Link className={styles.reportLink} to={`/report/${reportToken}`}>View conversation report</Link>}
                               <button type="button" className={styles.newConversationButton} onClick={startNewConversation}>Start new conversation</button>
                            </div>
