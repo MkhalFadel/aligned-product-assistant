@@ -3,6 +3,7 @@ import ConversationDashboard from './pages/ConversationDashboard/ConversationDas
 import ConversationDetails from './pages/ConversationDetails/ConversationDetails'
 import CustomerChat from './pages/CustomerChat/CustomerChat'
 import ConversationReport from './pages/ConversationReport/ConversationReport'
+import AssistantSettings from './pages/AssistantSettings/AssistantSettings'
 import ProductCatalogue from './pages/ProductCatalogue/ProductCatalogue'
 import ProductDashboard from './pages/ProductDashboard/ProductDashboard'
 import ProductDetails from './pages/ProductDetails/ProductDetails'
@@ -17,6 +18,7 @@ function App() {
          <Route path="/dashboard/products" element={<ProductDashboard />} />
          <Route path="/dashboard/conversations" element={<ConversationDashboard />} />
          <Route path="/dashboard/conversations/:id" element={<ConversationDetails />} />
+         <Route path="/dashboard/settings" element={<AssistantSettings />} />
          <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
    )

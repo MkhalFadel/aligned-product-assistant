@@ -1,9 +1,11 @@
 const prisma = require("../lib/prisma");
 const aiService = require("./aiService");
 const scoringService = require("./scoringService");
+const assistantSettingsService = require("./assistantSettingsService");
 const { buildCatalogueContext } = require("./catalogueContextService");
 const { serializeMessage, updateDetectedLanguage } = require("./conversationService");
 const { maxMessagesPerConversation } = require("../config/limits");
+const { normalizeAssistantFormatting } = require("../utils/assistantFormatting");
 
 function createAssistantError(message, code) {
    const error = new Error(message);
@@ -137,33 +139,35 @@ async function addUserMessageAndRespond(id, messageData) {
          where: { isActive: true },
          orderBy: { createdAt: "desc" }
       }),
-      prisma.assistantSettings.findFirst({
-         select: { highRiskThreshold: true },
-         orderBy: { updatedAt: "desc" }
-      })
+      assistantSettingsService.getAssistantSettings()
    ]);
    const catalogue = buildCatalogueContext(activeProducts);
 
    const response = await aiService.generateAssistantResponse({
       language: messageData.language,
       history: history.reverse(),
-      catalogue
+      catalogue,
+      ownerSettings: assistantSettings
    });
 
    if (response.language !== messageData.language) {
       throw createAssistantError("AI response language did not match the user message", "AI_LANGUAGE_ERROR");
    }
 
+   const formattedResponse = {
+      ...response,
+      answer: normalizeAssistantFormatting(response.answer)
+   };
    const recommendations = validateRecommendations(response.recommendedProducts, activeProducts);
    const scores = await scoringService.scoreAssistantResponse({
       customerMessage: messageData.content,
-      assistantAnswer: response.answer,
+      assistantAnswer: formattedResponse.answer,
       recommendations,
       activeProducts: catalogue,
       highRiskThreshold: assistantSettings?.highRiskThreshold
    });
    // TODO: Production should hold high-risk replies, retry with stricter grounding, re-score, then escalate if needed.
-   const assistantMessage = await storeAssistantMessage(id, response, recommendations, scores);
+   const assistantMessage = await storeAssistantMessage(id, formattedResponse, recommendations, scores);
 
    return {
       hasEnded: false,

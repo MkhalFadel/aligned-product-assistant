@@ -12,6 +12,7 @@ function DashboardNav() {
          <div className={styles.links}>
             <NavLink className={({ isActive }) => getLinkClassName(isActive)} to="/dashboard/products">Products</NavLink>
             <NavLink className={({ isActive }) => getLinkClassName(isActive)} to="/dashboard/conversations">Conversations</NavLink>
+            <NavLink className={({ isActive }) => getLinkClassName(isActive)} to="/dashboard/settings">Settings</NavLink>
          </div>
          <NavLink className={styles.customerLink} to="/">Customer view</NavLink>
       </nav>

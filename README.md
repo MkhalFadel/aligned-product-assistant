@@ -99,7 +99,9 @@ The reviewer dashboard provides:
 - a newest-first conversation list with message counts, score averages, and flagged-response counts;
 - full conversation detail with USER and ASSISTANT messages displayed distinctly;
 - per-assistant-message accuracy, hallucination-risk, flagged state, and scoring mode;
-- customer request summaries and submitted feedback.
+- customer request summaries and submitted feedback;
+- assistant name and behavior-instruction settings that owners can update without developer involvement;
+- an owner-configurable high-risk scoring threshold, while grounding and safety rules remain enforced in code.
 
 > This assessment intentionally exposes the dashboard without authentication so reviewers can inspect product management and conversation monitoring. In production, dashboard routes and APIs would be protected by authenticated admin accounts, role-based authorization, and tenant isolation.
 
@@ -133,7 +135,7 @@ Gemini requests have a bounded 20-second timeout. Retries are bounded: retryable
 - **Message** stores USER and ASSISTANT messages, language, quality scores, flag state, and scoring mode.
 - **Recommendation** belongs to an assistant message and references a product.
 - **Feedback** belongs to one conversation and stores a rating with an optional comment.
-- **AssistantSettings** stores assistant configuration, including the high-risk threshold.
+- **AssistantSettings** stores the owner-configurable assistant name, behavior instructions, and high-risk threshold.
 
 A conversation has many messages, an assistant message can have many recommendations, each recommendation references one product, and a conversation can have one feedback record.
 

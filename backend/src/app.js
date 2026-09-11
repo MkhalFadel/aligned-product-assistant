@@ -3,6 +3,7 @@ const cors = require("cors");
 const conversationRoutes = require("./routes/conversationRoutes");
 const productRoutes = require("./routes/productRoutes");
 const reportRoutes = require("./routes/reportRoutes");
+const assistantSettingsRoutes = require("./routes/assistantSettingsRoutes");
 
 const app = express();
 const configuredOrigins = [
@@ -45,6 +46,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api/products", productRoutes);
 app.use("/api/conversations", conversationRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/settings", assistantSettingsRoutes);
 
 // Keep unexpected errors out of API responses while logging them server-side.
 app.use((error, req, res, next) => {

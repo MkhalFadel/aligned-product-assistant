@@ -1,6 +1,7 @@
 const aiService = require("./aiService");
+const { defaultAssistantSettings } = require("../config/assistantSettings");
 
-const fallbackHighRiskThreshold = 30;
+const fallbackHighRiskThreshold = defaultAssistantSettings.highRiskThreshold;
 
 // Higher weights reflect errors that could materially mislead a recommendation.
 const severityWeights = {
