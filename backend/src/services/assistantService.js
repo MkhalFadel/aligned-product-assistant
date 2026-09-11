@@ -41,7 +41,8 @@ async function storeAssistantMessage(conversationId, response, recommendations, 
       language: response.language,
       accuracyScore: scores.accuracyScore,
       hallucinationRisk: scores.hallucinationRisk,
-      isFlagged: scores.isFlagged
+      isFlagged: scores.isFlagged,
+      scoringMode: scores.scoringMode
    };
 
    if (recommendations.length > 0) {
@@ -64,7 +65,7 @@ async function storeAssistantMessage(conversationId, response, recommendations, 
       })
    ]);
 
-   return serializeMessage(message);
+   return message;
 }
 
 // Stores one trusted user message, then generates and persists its grounded reply.
@@ -149,8 +150,8 @@ async function addUserMessageAndRespond(id, messageData) {
 
    return {
       hasEnded: false,
-      userMessage: serializeMessage(userMessage),
-      assistantMessage
+      userMessage: serializeMessage(userMessage, { includeScoringMode: false }),
+      assistantMessage: serializeMessage(assistantMessage, { includeScoringMode: false })
    };
 }
 

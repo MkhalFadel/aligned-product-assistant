@@ -31,6 +31,13 @@ enum Language {
   @@map("language")
 }
 
+enum ScoringMode {
+  FULL
+  DETERMINISTIC_FALLBACK
+
+  @@map("scoring_mode")
+}
+
 model Product {
   id              String           @id @default(uuid()) @map("id")
   name            String           @map("name")
@@ -75,6 +82,7 @@ model Message {
   accuracyScore     Float?           @map("accuracy_score")
   hallucinationRisk Float?           @map("hallucination_risk")
   isFlagged         Boolean          @default(false) @map("is_flagged")
+  scoringMode       ScoringMode      @default(FULL) @map("scoring_mode")
   createdAt         DateTime         @default(now()) @map("created_at")
   conversation      Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   recommendations   Recommendation[]

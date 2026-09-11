@@ -75,6 +75,17 @@
    line-height: 1.45;
 }
 
+.fallbackReview {
+   margin: 14px 0 0;
+   padding: 10px 12px;
+   color: #1e3a8a;
+   border: 1px solid #bfdbfe;
+   border-radius: 8px;
+   background: #eff6ff;
+   font-size: 13px;
+   line-height: 1.45;
+}
+
 .recommendations {
    margin-top: 20px;
    padding-top: 18px;

@@ -207,6 +207,85 @@ function getResolutionFindings(assistantText, activeProducts, findings, seenFind
    }
 }
 
+function escapeRegExp(value) {
+   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function getWeightInKilograms(product) {
+   const weight = product.attributes?.weight;
+   const match = typeof weight === "string" && weight.match(/(\d+(?:\.\d+)?)\s*kg/i);
+
+   return match ? Number(match[1]) : null;
+}
+
+function getComparisonFindings(assistantText, activeProducts, findings, seenFindings) {
+   const productNames = activeProducts
+      .map((product) => product.name)
+      .sort((firstName, secondName) => secondName.length - firstName.length);
+
+   if (productNames.length < 2) {
+      return;
+   }
+
+   const productByName = new Map(activeProducts.map((product) => [product.name.toLowerCase(), product]));
+   const productNamePattern = productNames.map(escapeRegExp).join("|");
+   const comparisonDefinitions = [
+      {
+         comparison: "lighter than",
+         field: "weightComparison",
+         getValue: getWeightInKilograms,
+         isSupported: (firstValue, secondValue) => firstValue < secondValue
+      },
+      {
+         comparison: "heavier than",
+         field: "weightComparison",
+         getValue: getWeightInKilograms,
+         isSupported: (firstValue, secondValue) => firstValue > secondValue
+      },
+      {
+         comparison: "cheaper than",
+         field: "priceComparison",
+         getValue: (product) => Number(product.price),
+         isSupported: (firstValue, secondValue) => firstValue < secondValue
+      },
+      {
+         comparison: "more expensive than",
+         field: "priceComparison",
+         getValue: (product) => Number(product.price),
+         isSupported: (firstValue, secondValue) => firstValue > secondValue
+      }
+   ];
+
+   comparisonDefinitions.forEach((definition) => {
+      const pattern = new RegExp(
+         `(?:the\\s+)?(${productNamePattern})\\s+is\\s+${definition.comparison}\\s+(?:the\\s+)?(${productNamePattern})`,
+         "gi"
+      );
+      let match;
+
+      while ((match = pattern.exec(assistantText)) !== null) {
+         const firstProduct = productByName.get(match[1].toLowerCase());
+         const secondProduct = productByName.get(match[2].toLowerCase());
+         const firstValue = definition.getValue(firstProduct);
+         const secondValue = definition.getValue(secondProduct);
+
+         if (!Number.isFinite(firstValue) || !Number.isFinite(secondValue)) {
+            continue;
+         }
+
+         addFinding(findings, seenFindings, {
+            text: `${firstProduct.name} is ${definition.comparison} ${secondProduct.name}`,
+            claimType: "comparison",
+            field: definition.field,
+            value: `${firstProduct.id}:${definition.comparison}:${secondProduct.id}`,
+            assessment: definition.isSupported(firstValue, secondValue) ? "SUPPORTED" : "UNSUPPORTED",
+            severityKey: "incorrectComparison",
+            source: "deterministic"
+         });
+      }
+   });
+}
+
 function getDeterministicFindings(assistantAnswer, recommendations, activeProducts) {
    const findings = [];
    const seenFindings = new Set();
@@ -248,6 +327,7 @@ function getDeterministicFindings(assistantAnswer, recommendations, activeProduc
    getRamFindings(assistantText, activeProducts, findings, seenFindings);
    getGpuFindings(assistantText, activeProducts, findings, seenFindings);
    getResolutionFindings(assistantText, activeProducts, findings, seenFindings);
+   getComparisonFindings(assistantText, activeProducts, findings, seenFindings);
 
    return findings;
 }
@@ -389,7 +469,7 @@ function getFlagReasons(findings, hallucinationRisk, threshold) {
    return flagReasons;
 }
 
-function buildScoreResult(findings, highRiskThreshold) {
+function buildScoreResult(findings, highRiskThreshold, scoringMode = "FULL") {
    const scores = calculateScores(findings);
    const threshold = resolveHighRiskThreshold(highRiskThreshold);
    const flagReasons = getFlagReasons(findings, scores.hallucinationRisk, threshold);
@@ -399,6 +479,7 @@ function buildScoreResult(findings, highRiskThreshold) {
       hallucinationRisk: scores.hallucinationRisk,
       // Critical catalogue errors trigger review even below the aggregate risk threshold.
       isFlagged: flagReasons.length > 0,
+      scoringMode,
       details: {
          totalClaims: scores.totalClaims,
          supportedClaims: scores.supportedClaims,
@@ -412,28 +493,23 @@ function buildScoreResult(findings, highRiskThreshold) {
    };
 }
 
-function getDeterministicFallbackScore(deterministicFindings) {
-   const fallbackFindings = [...deterministicFindings, {
-      text: "Unverified assistant content",
-      claimType: "unknown",
-      field: "unverifiedContent",
-      value: "semantic-scoring-unavailable",
-      assessment: "UNSUPPORTED",
-      severityKey: "inventedSpecification",
-      source: "fallback"
-   }];
-   const scores = calculateScores(fallbackFindings);
+function getDeterministicFallbackScore(deterministicFindings, highRiskThreshold) {
+   const scoreResult = buildScoreResult(
+      deterministicFindings,
+      highRiskThreshold,
+      "DETERMINISTIC_FALLBACK"
+   );
 
    return {
-      accuracyScore: scores.accuracyScore,
-      hallucinationRisk: scores.hallucinationRisk,
+      ...scoreResult,
       isFlagged: true,
+      scoringMode: "DETERMINISTIC_FALLBACK",
       details: {
-         totalClaims: scores.totalClaims,
-         supportedClaims: scores.supportedClaims,
-         unsupportedClaims: scores.unsupportedClaims,
-         flagReasons: ["Semantic scoring unavailable"],
-         deterministicFailures: deterministicFindings.filter((finding) => finding.assessment === "UNSUPPORTED"),
+         ...scoreResult.details,
+         flagReasons: [...new Set([...scoreResult.details.flagReasons, "Semantic scoring unavailable"])],
+         deterministicFailures: deterministicFindings.filter((finding) => (
+            finding.source === "deterministic" && finding.assessment === "UNSUPPORTED"
+         )),
          semanticFindings: []
       }
    };
@@ -444,6 +520,7 @@ function getUltimateConservativeScore() {
       accuracyScore: 0,
       hallucinationRisk: 100,
       isFlagged: true,
+      scoringMode: "DETERMINISTIC_FALLBACK",
       details: {
          totalClaims: 0,
          supportedClaims: 0,
@@ -505,7 +582,7 @@ async function scoreAssistantResponse({
          code: error.code
       });
       try {
-         return getDeterministicFallbackScore(deterministicFindings);
+         return getDeterministicFallbackScore(deterministicFindings, highRiskThreshold);
       } catch (fallbackError) {
          console.error("Deterministic scoring fallback failed; using conservative scores", {
             name: fallbackError.name,

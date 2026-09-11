@@ -22,15 +22,20 @@ function serializeProduct(product) {
 }
 
 // Converts nullable score values and nested recommended products for API responses.
-function serializeMessage(message) {
+function serializeMessage(message, { includeScoringMode = true } = {}) {
+   const { scoringMode, ...messageData } = message;
    const serializedMessage = {
-      ...message,
-      accuracyScore: serializeNumber(message.accuracyScore),
-      hallucinationRisk: serializeNumber(message.hallucinationRisk)
+      ...messageData,
+      accuracyScore: serializeNumber(messageData.accuracyScore),
+      hallucinationRisk: serializeNumber(messageData.hallucinationRisk)
    };
 
+   if (includeScoringMode) {
+      serializedMessage.scoringMode = scoringMode;
+   }
+
    if (message.recommendations) {
-      serializedMessage.recommendations = message.recommendations.map((recommendation) => ({
+      serializedMessage.recommendations = messageData.recommendations.map((recommendation) => ({
          ...recommendation,
          product: serializeProduct(recommendation.product)
       }));

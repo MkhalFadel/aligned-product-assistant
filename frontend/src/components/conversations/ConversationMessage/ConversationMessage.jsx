@@ -58,7 +58,13 @@ function ConversationMessage({ message }) {
                   <ScoreBadge label="Hallucination risk" value={message.hallucinationRisk} type="risk" />
                </section>
 
-               {message.isFlagged && (
+               {message.scoringMode === 'DETERMINISTIC_FALLBACK' && (
+                  <p className={styles.fallbackReview} role="status">
+                     <strong>Full semantic verification was unavailable.</strong> This response was scored using deterministic catalogue checks and has been flagged for review.
+                  </p>
+               )}
+
+               {message.isFlagged && message.scoringMode !== 'DETERMINISTIC_FALLBACK' && (
                   <p className={styles.flagged} role="status">
                      <strong>Flagged for review.</strong> This response needs a business-owner review.
                   </p>

@@ -74,6 +74,7 @@ function isConversationMessage(message) {
       && isNullableNumber(message.accuracyScore)
       && isNullableNumber(message.hallucinationRisk)
       && typeof message.isFlagged === 'boolean'
+      && (message.scoringMode === 'FULL' || message.scoringMode === 'DETERMINISTIC_FALLBACK')
       && Array.isArray(message.recommendations)
       && message.recommendations.every(isRecommendation)
 }
